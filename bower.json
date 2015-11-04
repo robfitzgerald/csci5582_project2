@@ -1,0 +1,19 @@
+{
+  "name": "project_02",
+  "version": "0.0.0",
+  "authors": [
+    "Robert Fitzgerald <robfitzgerald@gmail.com>"
+  ],
+  "description": "AI project 2: Stack-based STRIPS approach",
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "angular": "~1.4.7"
+  }
+}
