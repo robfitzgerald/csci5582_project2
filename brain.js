@@ -4,7 +4,15 @@
 
 (function() {
 
-  function predicate(name, x, y) {
+  /**
+   *
+   * @param name
+   * @param x
+   * @param y
+   * @returns {{x: (*|null), y: (*|null), name: *}}
+   * @constructor
+   */
+  function Predicate(name, x, y) {
     var thisX = x || null;
     var thisY = y || null;
     return {
@@ -23,45 +31,99 @@
       stack: op_stack,
       unstack: op_unstack,
       pickup: op_pickup,
-      putdown: op_putdown
+      putdown: op_putdown,
+      generateOperations: generateOperations
     };
 
     function op_stack(x, y) {
       return {
-        p: statement([predicate('clear', y), predicate('holding', x)]),
-        d: statement([predicate('clear', y), predicate('holding', x)]),
-        a: statement([predicate('armempty'), predicate('on', x, y)])
+        p: Statement([Predicate('clear', y), Predicate('holding', x)]),
+        d: Statement([Predicate('clear', y), Predicate('holding', x)]),
+        a: Statement([Predicate('armempty'), Predicate('on', x, y)])
       }
     }
     function op_unstack(x, y) {
       return {
-        p: statement([predicate('on', x, y), predicate('clear', x), predicate('armempty')]),
-        d: statement([predicate('on', x, y), predicate('armempty')]),
-        a: statement([predicate('holding', x), predicate('clear', y)])
+        p: Statement([Predicate('on', x, y), Predicate('clear', x), Predicate('armempty')]),
+        d: Statement([Predicate('on', x, y), Predicate('armempty')]),
+        a: Statement([Predicate('holding', x), Predicate('clear', y)])
       }
     }
     function op_pickup(x) {
       return {
-        p: statement([predicate('clear', x), predicate('ontable', x), predicate('armempty')]),
-        d: statement([predicate('ontable', x), predicate('armempty')]),
-        a: statement([predicate('holding', x)])
+        p: Statement([Predicate('clear', x), Predicate('ontable', x), Predicate('armempty')]),
+        d: Statement([Predicate('ontable', x), Predicate('armempty')]),
+        a: Statement([Predicate('holding', x)])
       }
     }
     function op_putdown(x) {
       return {
-        p: statement([predicate('holding', x)]),
-        d: statement([predicate('holding', x)]),
-        a: statement([predicate('ontable', x), predicate('armempty')])
+        p: Statement([Predicate('holding', x)]),
+        d: Statement([Predicate('holding', x)]),
+        a: Statement([Predicate('ontable', x), Predicate('armempty')])
       }
+    }
+
+    /**
+     *
+     * @param {Statement} current
+     * @param {Array} members, a string array
+     * @returns {Array}
+     */
+    function generateOperations(current, members) {
+      var ops = [];
+
+      /* zero-parameter operations */
+
+      for (var i = 0; i < members.length; ++i) {
+
+        /* one-parameter operations */
+        var pickup = op_pickup(members[i]);
+        if (current.matchStatement(pickup.a)) {
+          ops.push(pickup);
+        }
+        var putdown = op_putdown(members[i]);
+        if(members[i] == 'A') {
+          console.log('putdown(A)');
+          console.log(putdown.a.list);
+          console.log(current.list)
+        }
+        if (current.matchStatement(putdown.a)) {
+          console.log('found!');
+          ops.push(putdown);
+        }
+
+        for (var j = 0; i < members.length; i++) {
+          if (i == j) {
+            // do nothing
+          } else {
+
+            /* two-parameter operations */
+            var stack = op_stack(members[i], members[j]);
+            if (current.matchStatement(stack.a)) {
+              ops.push(stack);
+            }
+            var unstack = op_unstack(members[i], members[j]);
+            if (current.matchStatement(unstack.a)) {
+              ops.push(stack);
+            }
+          }
+        }
+
+      };
+
+      return ops;
     }
 
   }
 
   /**
-   *
-   * @returns {Statement} a list of predicates
+   * Statement class
+   * @param {Array} predicates
+   * @returns {{list: (*|Array), addPredicate: addPredicate, matchStatement: matchStatement, containsAPredicateIn: containsAPredicateIn}}
+   * @constructor
    */
-  function statement(predicates) {
+  function Statement(predicates) {
     var list = predicates || [];
 
     function addPredicate(p) {
@@ -73,51 +135,73 @@
      * @param statement
      * @returns {boolean} precondition matches current state
      */
-    function cullPredicates (statement) {
+    function matchStatement (statement) {
       var found = [];
       statement.list.forEach(function(element,index,array) {
         for (var j = 0; j < list.length; ++j) {
           if (list[j] === element) {
-            //console.log('found!');
-            //console.log(list[j]);
+            console.log('found!');
+            console.log(list[j]);
             found.push(list[j]);
           }
         }
       });
-      //console.log('state has: ' + list.length + ', found: ' + found.length + ', testing for: ' + statement.list.length);
+      //console.log('state has: ' + list.length + ', found: ' + found.length + ', testing for: ' + Statement.list.length);
       return (found.length == statement.list.length);
+    }
+
+    /**
+     * checks if this statement contains at least one of the predicates in the passed statement
+     * @param {Statement} statement
+     * @returns {boolean}
+     */
+    function containsAPredicateIn (statement) {
+      var found = [];
+      statement.list.forEach(function(element,index,array) {
+        //console.log(element);
+        //console.log(statement);
+        for (var j = 0; j < list.length; ++j) {
+          if (list[j] === element) {
+            console.log('found!');
+            console.log(list[j]);
+            return true;
+          }
+        }
+      });
+      return false;
     }
 
     return {
       list: list,
       addPredicate: addPredicate,
-      cullPredicates: cullPredicates
+      matchStatement: matchStatement,
+      containsAPredicateIn: containsAPredicateIn
     }
   }
 
   function state(current) {
     var validOps = [];
-    // contains a statement which represents the state predicates
-    // a statement being an array of predicates
+    // contains a Statement which represents the state predicates
+    // a Statement being an array of predicates
 
     // operations on state: try to apply an operation,
-    //  for each statement in state, cullPredicates. when done, if applied statement is now empty, then
+    //  for each Statement in state, matchStatement. when done, if applied Statement is now empty, then
     //   operation is valid.
   }
 
   var blocksWorld = stackBasedSTRIPS([
     /* start state */
-    predicate('on', 'B', 'A'),
-    predicate('ontable', 'A'),
-    predicate('ontable', 'C'),
-    predicate('ontable', 'D'),
-    predicate('armempty')
+    Predicate('on', 'B', 'A'),
+    Predicate('ontable', 'A'),
+    Predicate('ontable', 'C'),
+    Predicate('ontable', 'D'),
+    Predicate('armempty')
   ],[
     /* goal state */
-    predicate('on', 'C', 'A'),
-    predicate('on', 'B', 'D'),
-    predicate('ontable', 'A'),
-    predicate('ontable', 'D')
+    Predicate('on', 'C', 'A'),
+    Predicate('on', 'B', 'D'),
+    Predicate('ontable', 'A'),
+    Predicate('ontable', 'D')
   ],[
     /* members */
     'A', 'B', 'C', 'D'
@@ -126,33 +210,38 @@
     blocksWorldOperations()
   );
 
-  var myStatement = statement();
-  var statementTrue = statement();
-  var statementFalse = statement();
-  var p0 = predicate('armempty');
-  var p1 = predicate('ontable', 'A');
-  var p2 = predicate('on', 'A', 'B');
-  var p3 = predicate('pickup', 'A');
+  //var myStatement = Statement();
+  //var statementTrue = Statement();
+  //var statementFalse = Statement();
+  //var p0 = Predicate('armempty');
+  //var p1 = Predicate('ontable', 'A');
+  //var p2 = Predicate('on', 'A', 'B');
+  //var p3 = Predicate('pickup', 'A');
+  //
+  //
+  //myStatement.addPredicate(p3);
+  //myStatement.addPredicate(p0);
+  //statementTrue.addPredicate(p3);
+  //statementFalse.addPredicate(p0);
 
 
-  myStatement.addPredicate(p3);
-  myStatement.addPredicate(p0);
-  statementTrue.addPredicate(p3);
-  statementFalse.addPredicate(p0);
+  //console.log('should be true:');
+  //console.log(myStatement.matchStatement(statementTrue));
+  //console.log('should be true:');
+  //console.log(myStatement.matchStatement(statementFalse));
 
-
-  console.log('should be true:');
-  console.log(myStatement.cullPredicates(statementTrue));
-  console.log('should be true:');
-  console.log(myStatement.cullPredicates(statementFalse));
-
-
-  /*
-     Diskutil list
-     diskutil unmountDisk /dev/disk2
-     sudo newfs_msdos -F 16 /dev/disk2
-     sudo dd bs=1m if=~wheezyxxxxxxx.img of=/dev/rdisk2
-   */
-
-
+  var start = Statement([
+    Predicate('on', 'B', 'A'),
+    Predicate('ontable', 'A'),
+    Predicate('ontable', 'C'),
+    Predicate('ontable', 'D'),
+    Predicate('armempty')
+  ]);
+  var members = [
+    'A', 'B', 'C', 'D'
+  ];
+  var ops = blocksWorldOperations();
+  var valid = ops.generateOperations(start, members);
+  console.log('valid operations:');
+  console.log(valid);
 })();

@@ -1,0 +1,12 @@
+move wraps a statement
+
+controller p2Ctrl
+    holds the current state statement
+
+factory blocksWorldOperations
+    has the data for each operation type
+    blocksWorldOperations.generateOperations(predicate)
+        returns array of moves
+
+we need to check the op.a(x,y)
+    current
