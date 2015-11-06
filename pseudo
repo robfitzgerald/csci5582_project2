@@ -10,3 +10,11 @@ factory blocksWorldOperations
 
 we need to check the op.a(x,y)
     current
+
+
+
+currentState.matchPredicate(someOperation)
+
+for this to work, one needs to be strictly less than
+
+we need the other operation... blarg.  ok.
