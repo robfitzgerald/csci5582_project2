@@ -1,7 +1,7 @@
 (function () {
 
   /**
-   *
+   * Represents a boolean predicate function of up to 2 parameters
    * @param name - identifier for predicate
    * @param val1 - value, if present
    * @param val2 - value, if present
@@ -19,7 +19,7 @@
   }
 
   /**
-   *
+   * Represents a list of Predicates held together by the AND operation
    * @param {Predicate} predicates - array of Predicate objects
    * @constructor
    */
@@ -42,6 +42,10 @@
     }
   }
 
+  /**
+   * A Singleton used to generate moves specific to the blocks world
+   * @returns {{generateOperations: generateOperations}}
+   */
   function blocksWorldOperations() {
     return {
       generateOperations: generateOperations
