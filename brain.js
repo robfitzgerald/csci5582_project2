@@ -98,6 +98,7 @@
 
     function op_stack(x, y) {
       return {
+        name: 'stack(' + x + ',' + y + ')',
         p: Statement([Predicate('clear', y), Predicate('holding', x)]),
         d: Statement([Predicate('clear', y), Predicate('holding', x)]),
         a: Statement([Predicate('armempty'), Predicate('on', x, y)])
@@ -105,6 +106,7 @@
     }
     function op_unstack(x, y) {
       return {
+        name: 'unstack(' + x + ',' + y + ')',
         p: Statement([Predicate('on', x, y), Predicate('clear', x), Predicate('armempty')]),
         d: Statement([Predicate('on', x, y), Predicate('armempty')]),
         a: Statement([Predicate('holding', x), Predicate('clear', y)])
@@ -112,6 +114,7 @@
     }
     function op_pickup(x) {
       return {
+        name: 'pickup(' + x + ')',
         p: Statement([Predicate('clear', x), Predicate('ontable', x), Predicate('armempty')]),
         d: Statement([Predicate('ontable', x), Predicate('armempty')]),
         a: Statement([Predicate('holding', x)])
@@ -119,6 +122,7 @@
     }
     function op_putdown(x) {
       return {
+        name: 'putdown(' + x + ')',
         p: Statement([Predicate('holding', x)]),
         d: Statement([Predicate('holding', x)]),
         a: Statement([Predicate('ontable', x), Predicate('armempty')])
@@ -238,12 +242,18 @@
 
 
 
-  var goal = Statement([
+  var start = Statement([
     Predicate('on', 'B', 'A'),
     Predicate('ontable', 'A'),
     Predicate('ontable', 'C'),
     Predicate('ontable', 'D'),
     Predicate('armempty')
+  ]);
+  var goal = Statement([
+    Predicate('on', 'C', 'A'),
+    Predicate('on', 'B', 'D'),
+    Predicate('ontable', 'A'),
+    Predicate('ontable', 'D')
   ]);
   var members = [
     'A', 'B', 'C', 'D'

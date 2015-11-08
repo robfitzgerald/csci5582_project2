@@ -11,10 +11,12 @@ factory blocksWorldOperations
 we need to check the op.a(x,y)
     current
 
+....
 
+ok, i have an array of moves generated outside the context of a state generation ƒn
 
-currentState.matchPredicate(someOperation)
+now, in context:
 
-for this to work, one needs to be strictly less than
-
-we need the other operation... blarg.  ok.
+current = top member of stack
+is it a predicate?
+    check if it's true
