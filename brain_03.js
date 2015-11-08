@@ -83,15 +83,9 @@
      */
     function generateOperations(current, members) {
       var ops = [];
-
-      /* zero-parameter operations */
-
       for (var i = 0; i < members.length; ++i) {
-
         /* one-parameter operations */
-        console.log(members[i]);
         var pickup = new Op_pickup(members[i]);
-        console.log(pickup);
         if (current.containsOne(pickup.a)) {
           ops.push(pickup);
         }
@@ -100,11 +94,10 @@
           ops.push(putdown);
         }
 
-        for (var j = 0; i < members.length; i++) {
+        for (var j = 0; j < members.length; j++) {
           if (i == j) {
             // do nothing
           } else {
-
             /* two-parameter operations */
             var stack = new Op_stack(members[i], members[j]);
             if (current.containsOne(stack.a)) {
@@ -116,13 +109,9 @@
             }
           }
         }
-
       }
-      ;
-
       return ops;
     }
-
   }
 
   // tests
