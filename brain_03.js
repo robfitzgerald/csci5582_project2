@@ -30,7 +30,7 @@
 
   /**
    * Represents a list of Predicates held together by the AND operation
-   * @param {Predicate} predicates - array of Predicate objects
+   * @param {Array} predicates - array of Predicate objects
    * @constructor
    */
   function Statement(predicates) {
@@ -38,6 +38,7 @@
     this.containsOne = containsOne;
     this.toString = toString;
     this.add = add;
+    this.unpack = unpack;
 
     function add(p) {
       this.list.push(p);
@@ -55,6 +56,18 @@
         }
       }
       return false;
+    }
+
+    /**
+     * unpacks a statement into an array of singleton statements
+     * @returns {Array} - array of Statements, each containing one predicate
+     */
+    function unpack() {
+      var output = [];
+      for (var i = this.list.length - 1; i >= 0; --i) {
+        output.push(new Statement([this.list[i]]));
+      }
+      return output;
     }
 
     function toString() {
@@ -149,34 +162,33 @@
   }
 
 
-  function strips(stack,current,ops,plan) {
+  function strips(move,current,ops,plan) {
     // starts with a stack which has a move on the top of it
     // expand the move
-    var moveToExpand = stack[stack.length - 1].a;
-    for (var i = (moveToExpand.list.length - 1); i >= 0; --i) {
-      // pushes a Statement containing a single predicate
-      stack.push(new Statement(moveToExpand.list[i]));
-    }
+    var stack = move.a.unpack();
+    console.log(stack);
+    console.log(current);
+    console.log('should be true: ' + stack[1].containsOne(current));
+
     // evaluate the stack: for each member in the stack
     //   is it a move? if we arrived at it by this process, then that means we need to apply it to the current
     //    also, add the move.name to the 'plan'.
     //   if not a move, it's a predicate. is it true? if so, pop, repeat.
     //   if it's false, then generate moves from it and recurse.
     for (var i = (stack.length - 1); i >= 0; --i) {
-      console.log('stack location: ' + i);
-      console.log(stack[i]);
-      if (stack[i].hasOwnProperty('name')) { /* bottomed out to the move associated w/ this section of the stack */
-        // it was true. let's pop it and return { stack, current, ops, plan }
-      } else if (stack[i].containsOne(current)) {
-        console.log('found a true predicate: ' + stack[stack.length - 1]);
+      if (stack[i].containsOne(current)) {
+        console.log('found a true predicate: ' + stack[i]);
         // pop any true predicates
         stack.pop();
       } else {
         // we need to generate a move which is valid
-
       }
     }
-    //
+
+    // if we got here, we cleared the stack, aka, the move that we generated this strips() call with can be applied to
+    // our plan and our current state.
+
+    /* TODO: apply move to plan and current state */
 
   }
 
@@ -219,7 +231,9 @@
   //console.log(start.toString());
   var testStrips = [];
   testStrips.push(new ops.op('Y','Z'));
-  console.log('should be true: ' + s1.containsOne(s2));
-  strips(testStrips, new Statement(new Predicate('armempty')));
+  strips(
+    new ops.op('Y','Z'),
+    new Statement([new Predicate('armempty')])
+  );
 
 })();
