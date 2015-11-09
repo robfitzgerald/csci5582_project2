@@ -10,11 +10,21 @@
    */
   function Predicate(name, val1, val2) {
     this.name = name;
-    this.x = val1;
-    this.y = val2;
+    this.x = val1 || null;
+    this.y = val2 || null;
     this.equalTo = equalTo;
+    this.toString = toString;
     function equalTo(p) {
       return ((this.name == p.name) && (this.x == p.x) && (this.y == p.y));
+    }
+    function toString() {
+      if (this.y != null) {
+        return this.name + '(' + this.x + ',' + this.y + ')';
+      } else if (this.x != null) {
+        return this.name + '(' + this.x + ')';
+      } else {
+        return this.name + '()';
+      }
     }
   }
 
@@ -26,6 +36,12 @@
   function Statement(predicates) {
     this.list = predicates || [];
     this.containsOne = containsOne;
+    this.toString = toString;
+    this.add = add;
+
+    function add(p) {
+      this.list.push(p);
+    }
 
     function containsOne(s) {
       for (var i = 0; i < this.list.length; ++i) {
@@ -40,6 +56,19 @@
       }
       return false;
     }
+
+    function toString() {
+      var output = "[";
+      for (var i = 0; i < this.list.length; ++i) {
+        output += this.list[i].toString();
+        if (i != this.list.length - 1) {
+          output += ' ^ ';
+        }
+      }
+      return output + ']'
+
+    }
+
   }
 
   /**
@@ -48,7 +77,8 @@
    */
   function blocksWorldOperations() {
     return {
-      generateOperations: generateOperations
+      generateOperations: generateOperations,
+      op: Op_stack
     };
 
     function Op_stack(x, y) {
@@ -118,40 +148,78 @@
     }
   }
 
+
+  function strips(stack,current,ops,plan) {
+    // starts with a stack which has a move on the top of it
+    // expand the move
+    var moveToExpand = stack[stack.length - 1].a;
+    for (var i = (moveToExpand.list.length - 1); i >= 0; --i) {
+      // pushes a Statement containing a single predicate
+      stack.push(new Statement(moveToExpand.list[i]));
+    }
+    // evaluate the stack: for each member in the stack
+    //   is it a move? if we arrived at it by this process, then that means we need to apply it to the current
+    //    also, add the move.name to the 'plan'.
+    //   if not a move, it's a predicate. is it true? if so, pop, repeat.
+    //   if it's false, then generate moves from it and recurse.
+    for (var i = (stack.length - 1); i >= 0; --i) {
+      console.log('stack location: ' + i);
+      console.log(stack[i]);
+      if (stack[i].hasOwnProperty('name')) { /* bottomed out to the move associated w/ this section of the stack */
+        // it was true. let's pop it and return { stack, current, ops, plan }
+      } else if (stack[i].containsOne(current)) {
+        console.log('found a true predicate: ' + stack[stack.length - 1]);
+        // pop any true predicates
+        stack.pop();
+      } else {
+        // we need to generate a move which is valid
+
+      }
+    }
+    //
+
+  }
+
+
   // tests
-  var shouldBe = 'should be true: ';
-  var shouldNotBe = 'should be false: ';
+  //var shouldBe = 'should be true: ';
+  //var shouldNotBe = 'should be false: ';
   var p1 = new Predicate('one', 'A', 'B');
   var p2 = new Predicate('two', 'B', 'C');
   var p3 = new Predicate('one', 'A', 'B');
-  console.log(shouldNotBe + p1.equalTo(p2));
-  console.log(shouldBe + p1.equalTo(p1));
-  console.log(shouldBe + p1.equalTo(p3));
+  //console.log(shouldNotBe + p1.equalTo(p2));
+  //console.log(shouldBe + p1.equalTo(p1));
+  //console.log(shouldBe + p1.equalTo(p3));
   var s1 = new Statement([p1, p2]);
   var s2 = new Statement([p1]);
   var s3 = new Statement([p2]);
-  console.log(shouldBe + s1.containsOne(s2));
-  console.log(shouldNotBe + s2.containsOne(s3));
-
-  var start = new Statement([
-    new Predicate('on', 'B', 'A'),
-    new Predicate('ontable', 'A'),
-    new Predicate('ontable', 'C'),
-    new Predicate('ontable', 'D'),
-    new Predicate('armempty')
-  ]);
-  var goal = new Statement([
-    new Predicate('on', 'C', 'A'),
-    new Predicate('on', 'B', 'D'),
-    new Predicate('ontable', 'A'),
-    new Predicate('ontable', 'D')
-  ]);
-  var members = [
-    'A', 'B', 'C', 'D'
-  ];
+  //console.log(shouldBe + s1.containsOne(s2));
+  //console.log(shouldNotBe + s2.containsOne(s3));
+  //
+  //var start = new Statement([
+  //  new Predicate('on', 'B', 'A'),
+  //  new Predicate('ontable', 'A'),
+  //  new Predicate('ontable', 'C'),
+  //  new Predicate('ontable', 'D'),
+  //  new Predicate('armempty')
+  //]);
+  //var goal = new Statement([
+  //  new Predicate('on', 'C', 'A'),
+  //  new Predicate('on', 'B', 'D'),
+  //  new Predicate('ontable', 'A'),
+  //  new Predicate('ontable', 'D')
+  //]);
+  //var members = [
+  //  'A', 'B', 'C', 'D'
+  //];
   var ops = blocksWorldOperations();
-  var valid = ops.generateOperations(goal, members);
-  console.log('valid operations:');
-  console.log(valid);
+  //var valid = ops.generateOperations(goal, members);
+  //console.log('valid operations:');
+  //console.log(valid);
+  //console.log(start.toString());
+  var testStrips = [];
+  testStrips.push(new ops.op('Y','Z'));
+  console.log('should be true: ' + s1.containsOne(s2));
+  strips(testStrips, new Statement(new Predicate('armempty')));
 
 })();
