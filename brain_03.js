@@ -39,6 +39,7 @@
     this.toString = toString;
     this.add = add;
     this.unpack = unpack;
+    this.deleteOne = deleteOne;
 
     function add(p) {
       this.list.push(p);
@@ -169,9 +170,10 @@
   }
 
 
-  function strips(move,current,ops,members,planCallback) {
+  function strips(move,ops,members,currentCallback,planCallback) {
     // starts with a stack which has a move on the top of it
     // expand the move
+    var current = currentCallback();
     var stack = move.a.unpack();
     var correctMove = "";
     console.log(stack);
@@ -193,20 +195,19 @@
         console.log(validMoves);
         for (var j = 0; j < validMoves.length; ++j) {
           var tryThisMove = validMoves[j];
-          if (/*strips(tryThisMove,current,ops,members,planCallback)*/true) {
-            // TODO: modify current by deleting/adding per the ops rule
-            for (var k = 0; k < tryThisMove.d.list; ++k) {
-              current.deleteOne(tryThisMove.d.list[k]);  // gnarly style bro
+          if (strips(tryThisMove,ops,members,currentCallback,planCallback)) {
+            for (var k = 0; k < tryThisMove.d.list.length; ++k) {
+              currentCallback('d', tryThisMove.d.list[k]);
             }
-            for (var k = 0; k < tryThisMove.a.list; ++k) {
-              current.add(tryThisMove.a.list[k]);
+            for (var k = 0; k < tryThisMove.a.list.length; ++k) {
+              currentCallback('a', tryThisMove.a.list[k]);
             }
             correctMove = tryThisMove.name;
             planCallback(correctMove);
             stack.pop();
             j = validMoves.length;  // break this for loop
           }
-          console.log(current);
+          console.log(currentCallback());
           console.log(tryThisMove)
         }
       }
@@ -228,15 +229,15 @@
   // tests
   //var shouldBe = 'should be true: ';
   //var shouldNotBe = 'should be false: ';
-  var p1 = new Predicate('one', 'A', 'B');
-  var p2 = new Predicate('two', 'B', 'C');
-  var p3 = new Predicate('one', 'A', 'B');
+  //var p1 = new Predicate('one', 'A', 'B');
+  //var p2 = new Predicate('two', 'B', 'C');
+  //var p3 = new Predicate('one', 'A', 'B');
   //console.log(shouldNotBe + p1.equalTo(p2));
   //console.log(shouldBe + p1.equalTo(p1));
   //console.log(shouldBe + p1.equalTo(p3));
-  var s1 = new Statement([p1, p2]);
-  var s2 = new Statement([p1]);
-  var s3 = new Statement([p2]);
+  //var s1 = new Statement([p1, p2]);
+  //var s2 = new Statement([p1]);
+  //var s3 = new Statement([p2]);
   //console.log(shouldBe + s1.containsOne(s2));
   //console.log(shouldNotBe + s2.containsOne(s3));
   //
@@ -258,19 +259,43 @@
   ];
   var ops = blocksWorldOperations();
   var plan = [];
-  function addToPlan(move) {
-    plan.push(move);
+  var current = start;
+
+  function planCallback(move) {
+    if (move == null) {
+      return plan;
+    } else {
+      plan.push(move);
+    }
   }
+
+  function currentCallback(flag,body) {
+    console.log('currentCallback(' + flag + ',' + body +')');
+    if (flag == null) {
+      return current;
+    } else if (flag == 'a') {
+      current.add(body);
+    } else if (flag == 'd') {
+      current.deleteOne(body);
+    }
+  }
+
+  //planCallback('abcd');
+  //console.log(planCallback());
+  //currentCallback('a',new Predicate('jojo'));
+  //console.log(currentCallback());
+  //currentCallback('d',new Predicate('jojo'));
+  //console.log(currentCallback());
   //var valid = ops.generateOperations(goal, members);
   //console.log('valid operations:');
   //console.log(valid);
   //console.log(start.toString());
   strips(
     new ops.op('A','B'),
-    start,
     blocksWorldOperations(),
     members,
-    addToPlan
+    currentCallback,
+    planCallback
   );
 
 })();
