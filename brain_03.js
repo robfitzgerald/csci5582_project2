@@ -293,10 +293,10 @@
 
   //planCallback('abcd');
   //console.log(planCallback());
-  //currentCallback('a',new Predicate('jojo'));
-  //console.log(currentCallback());
-  //currentCallback('d',new Predicate('jojo'));
-  //console.log(currentCallback());
+  currentCallback('a',new Predicate('jojo'));
+  console.log(currentCallback());
+  currentCallback('d',new Predicate('jojo'));
+  console.log(currentCallback());
   //var valid = ops.generateOperations(goal, members);
   //console.log('valid operations:');
   //console.log(valid);
