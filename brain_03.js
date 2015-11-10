@@ -79,7 +79,14 @@
         }
       }
       return output + ']'
+    }
 
+    function deleteOne(predicate) {
+      for (var i = 0; i < this.list.length; ++i) {
+        if (this.list[i].equalTo(predicate)) {
+          this.list.splice(i,1);
+        }
+      }
     }
 
   }
@@ -162,13 +169,13 @@
   }
 
 
-  function strips(move,current,ops,plan) {
+  function strips(move,current,ops,members,planCallback) {
     // starts with a stack which has a move on the top of it
     // expand the move
     var stack = move.a.unpack();
+    var correctMove = "";
     console.log(stack);
     console.log(current);
-    console.log('should be true: ' + stack[1].containsOne(current));
 
     // evaluate the stack: for each member in the stack
     //   is it a move? if we arrived at it by this process, then that means we need to apply it to the current
@@ -181,12 +188,37 @@
         // pop any true predicates
         stack.pop();
       } else {
-        // we need to generate a move which is valid
+        // we need to generate a move and recurse. hopefully it will result in moving in the right direction..
+        var validMoves = ops.generateOperations(stack[i],members);
+        console.log(validMoves);
+        for (var j = 0; j < validMoves.length; ++j) {
+          var tryThisMove = validMoves[j];
+          if (/*strips(tryThisMove,current,ops,members,planCallback)*/true) {
+            // TODO: modify current by deleting/adding per the ops rule
+            for (var k = 0; k < tryThisMove.d.list; ++k) {
+              current.deleteOne(tryThisMove.d.list[k]);  // gnarly style bro
+            }
+            for (var k = 0; k < tryThisMove.a.list; ++k) {
+              current.add(tryThisMove.a.list[k]);
+            }
+            correctMove = tryThisMove.name;
+            planCallback(correctMove);
+            stack.pop();
+            j = validMoves.length;  // break this for loop
+          }
+          console.log(current);
+          console.log(tryThisMove)
+        }
       }
     }
 
     // if we got here, we cleared the stack, aka, the move that we generated this strips() call with can be applied to
     // our plan and our current state.
+    if (stack.length == 0) {
+      return true;
+    } else {
+      return false;
+    }
 
     /* TODO: apply move to plan and current state */
 
@@ -208,32 +240,37 @@
   //console.log(shouldBe + s1.containsOne(s2));
   //console.log(shouldNotBe + s2.containsOne(s3));
   //
-  //var start = new Statement([
-  //  new Predicate('on', 'B', 'A'),
-  //  new Predicate('ontable', 'A'),
-  //  new Predicate('ontable', 'C'),
-  //  new Predicate('ontable', 'D'),
-  //  new Predicate('armempty')
-  //]);
+  var start = new Statement([
+    new Predicate('on', 'B', 'A'),
+    new Predicate('ontable', 'A'),
+    new Predicate('ontable', 'C'),
+    new Predicate('ontable', 'D'),
+    new Predicate('armempty')
+  ]);
   //var goal = new Statement([
   //  new Predicate('on', 'C', 'A'),
   //  new Predicate('on', 'B', 'D'),
   //  new Predicate('ontable', 'A'),
   //  new Predicate('ontable', 'D')
   //]);
-  //var members = [
-  //  'A', 'B', 'C', 'D'
-  //];
+  var members = [
+    'A', 'B', 'C', 'D'
+  ];
   var ops = blocksWorldOperations();
+  var plan = [];
+  function addToPlan(move) {
+    plan.push(move);
+  }
   //var valid = ops.generateOperations(goal, members);
   //console.log('valid operations:');
   //console.log(valid);
   //console.log(start.toString());
-  var testStrips = [];
-  testStrips.push(new ops.op('Y','Z'));
   strips(
-    new ops.op('Y','Z'),
-    new Statement([new Predicate('armempty')])
+    new ops.op('A','B'),
+    start,
+    blocksWorldOperations(),
+    members,
+    addToPlan
   );
 
 })();
