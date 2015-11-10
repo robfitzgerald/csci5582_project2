@@ -170,14 +170,15 @@
   }
 
 
-  function strips(move,ops,members,currentCallback,planCallback) {
+  function strips(move,ops,members,currentCallback,planCallback,thisPath) {
     // starts with a stack which has a move on the top of it
     // expand the move
     var current = currentCallback();
     var stack = move.a.unpack();
     var correctMove = "";
-    console.log(stack);
-    console.log(current);
+    //console.log(stack);
+    //console.log(current);
+    //console.log(planCallback());
 
     // evaluate the stack: for each member in the stack
     //   is it a move? if we arrived at it by this process, then that means we need to apply it to the current
@@ -192,23 +193,29 @@
       } else {
         // we need to generate a move and recurse. hopefully it will result in moving in the right direction..
         var validMoves = ops.generateOperations(stack[i],members);
-        console.log(validMoves);
+        //console.log(validMoves);
         for (var j = 0; j < validMoves.length; ++j) {
           var tryThisMove = validMoves[j];
-          if (strips(tryThisMove,ops,members,currentCallback,planCallback)) {
-            for (var k = 0; k < tryThisMove.d.list.length; ++k) {
-              currentCallback('d', tryThisMove.d.list[k]);
+          var doneBefore = (thisPath.indexOf(tryThisMove.name) > -1);
+          console.log('tested if this was done before. was it? ' + doneBefore);
+          if (!doneBefore) {
+            thisPath.push(tryThisMove.name);
+            if (strips(tryThisMove,ops,members,currentCallback,planCallback,thisPath)) {
+              for (var k = 0; k < tryThisMove.d.list.length; ++k) {
+                currentCallback('d', tryThisMove.d.list[k]);
+              }
+              for (var k = 0; k < tryThisMove.a.list.length; ++k) {
+                currentCallback('a', tryThisMove.a.list[k]);
+              }
+              correctMove = tryThisMove.name;
+              planCallback(correctMove);
+              stack.pop();
+              j = validMoves.length;  // break this for loop
             }
-            for (var k = 0; k < tryThisMove.a.list.length; ++k) {
-              currentCallback('a', tryThisMove.a.list[k]);
-            }
-            correctMove = tryThisMove.name;
-            planCallback(correctMove);
-            stack.pop();
-            j = validMoves.length;  // break this for loop
           }
+          console.log('at end of loop through valid moves, call depth ' + thisPath.length);
           console.log(currentCallback());
-          console.log(tryThisMove)
+          console.log(planCallback());
         }
       }
     }
@@ -248,18 +255,22 @@
     new Predicate('ontable', 'D'),
     new Predicate('armempty')
   ]);
-  //var goal = new Statement([
-  //  new Predicate('on', 'C', 'A'),
-  //  new Predicate('on', 'B', 'D'),
-  //  new Predicate('ontable', 'A'),
-  //  new Predicate('ontable', 'D')
-  //]);
+  var goal = {
+    name: 'goal',
+    a: new Statement([
+      new Predicate('on', 'C', 'A'),
+      new Predicate('on', 'B', 'D'),
+      new Predicate('ontable', 'A'),
+      new Predicate('ontable', 'D')
+    ])
+  };
   var members = [
     'A', 'B', 'C', 'D'
   ];
   var ops = blocksWorldOperations();
   var plan = [];
   var current = start;
+
 
   function planCallback(move) {
     if (move == null) {
@@ -291,11 +302,12 @@
   //console.log(valid);
   //console.log(start.toString());
   strips(
-    new ops.op('A','B'),
+    goal,
     blocksWorldOperations(),
     members,
     currentCallback,
-    planCallback
+    planCallback,
+    []
   );
 
 })();
