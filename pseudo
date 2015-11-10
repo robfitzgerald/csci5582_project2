@@ -20,3 +20,9 @@ now, in context:
 current = top member of stack
 is it a predicate?
     check if it's true
+
+;';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';'
+
+thungs to fux (wit)
+put PRECONDITIONS on strips.stack, not ADD list
+one of which will be a statement we will need to evaluate.
