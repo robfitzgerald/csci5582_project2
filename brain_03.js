@@ -35,7 +35,6 @@
    */
   function Statement(predicates) {
     this.list = predicates || [];
-    this.statement = true;
     this.containsOne = containsOne;
     this.containsAll = containsAll;
     this.toString = toString;
@@ -87,7 +86,7 @@
      */
     function unpack() {
       var output = [(new Statement(this.list))];
-      output[0].completeStatement = true;
+      output[0].isAnExpandedStatement = true;
       for (var i = this.list.length - 1; i >= 0; --i) {
         output.push(new Statement([this.list[i]]));
       }
@@ -205,21 +204,15 @@
 
     for (var i = (stack.length - 1); i >= 0; --i) {
       var properlyContained = true;
-      for (var ii = 0; ii < stack[i].list.length; ++ii) {
-        if (stack[i].containsOne(current)) {
-          properlyContained = false;
-        }
-      }
-
-      if (stack[i].containsOne(current)) {
+      if (currentCallback().containsAll(stack[i])) {
         //console.log('found a true predicate: ' + stack[i]);
         // pop any true predicates
         stack.pop();
-      } else {
+      } else if (!stack[i].isAnExpandedStatement){
         // we need to generate a move and recurse. hopefully it will result in moving in the right direction..
         var validMoves = ops.generateOperations(stack[i],members);
-        //console.log('valid moves:')
-        //console.log(validMoves);
+        console.log('valid moves:')
+        console.log(validMoves);
         // try moves until one works or you run out of moves
         for (var j = 0; j < validMoves.length; ++j) {
           var tryThisMove = validMoves[j];
@@ -242,9 +235,9 @@
               j = validMoves.length;  // break this for loop
             }
           }
-          //console.log('at end of loop through valid moves, call depth ' + thisPath.length);
-          //console.log(currentCallback().toString());
-          //console.log(planCallback());
+          console.log('at end of loop through valid moves, call depth ' + thisPath.length);
+          console.log(currentCallback().toString());
+          console.log(planCallback());
         }
       }
     }
