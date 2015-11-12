@@ -71,8 +71,8 @@
             match = true;
           }
         }
-        console.log('evaluated one member. match found?: ' + match);
-        console.log(this.list[j]);
+        //console.log('evaluated one member. match found?: ' + match);
+        //console.log(this.list[j]);
         if (!match) {
           return false;
         }
@@ -211,8 +211,8 @@
       } else if (!stack[i].isAnExpandedStatement){
         // we need to generate a move and recurse. hopefully it will result in moving in the right direction..
         var validMoves = ops.generateOperations(stack[i],members);
-        console.log('valid moves:');
-        console.log(validMoves);
+        //console.log('valid moves:');
+        //console.log(validMoves);
         // try moves until one works or you run out of moves
         for (var j = 0; j < validMoves.length; ++j) {
           var tryThisMove = validMoves[j];
@@ -221,30 +221,34 @@
           if (!doneBefore) {
             thisPath.push(tryThisMove.name);
             if (strips(tryThisMove,ops,members,thisPath)) {
-              //console.log('list length of delete-able predicates: ' + tryThisMove.d.list.length)
+              //console.log('list length of delete-able predicates: ' + tryThisMove.d.list.length);
               for (var k = 0; k < tryThisMove.d.list.length; ++k) {
-                console.log('deleting this guy: ' + tryThisMove.d.list[k]);
+                //console.log('deleting this guy: ' + tryThisMove.d.list[k]);
                 currentCallback('d', tryThisMove.d.list[k]);
               }
               for (var k = 0; k < tryThisMove.a.list.length; ++k) {
-                console.log('adding this guy: ' + tryThisMove.a.list[k]);
+                //console.log('adding this guy: ' + tryThisMove.a.list[k]);
                 currentCallback('a', tryThisMove.a.list[k]);
               }
               correctMove = tryThisMove.name;
+              console.log('CORRECT MOVE');
+              console.log(correctMove);
               planCallback(correctMove);
               stack.pop();
               j = validMoves.length;  // break this for loop
             }
           }
-          console.log('at end of loop through valid moves, call depth ' + thisPath.length);
-          console.log(currentCallback().toString());
-          console.log(planCallback());
+          //console.log('at end of loop through valid moves, call depth ' + thisPath.length);
+          //console.log(currentCallback().toString());
+          //console.log(planCallback());
         }
       }
     }
     // if we got here, and we cleared the stack, aka, the move that we generated this strips() call with can be applied to
     // our plan and our current state.
     //console.log('cleared the stack? ' + (stack.length == 0))
+    console.log('move name: ' + move.name);
+    console.log('stack.length: ' + stack.length);
     if (move.name == 'goal') {
       return true;
     }
@@ -306,7 +310,7 @@
   }
 
   function currentCallback(flag,body) {
-    var stubContents = ((flag==null) ? "" : flag + ',' + body)
+    var stubContents = ((flag==null) ? "" : flag + ',' + body);
       //console.log('currentCallback(' + stubContents +')');
     if (flag == null) {
       return current;
@@ -341,5 +345,13 @@
 
   console.log('done. our plan is (backwards order): ');
   console.log(plan);
+
+  function testTheCallback () {
+    currentCallback('a', new Predicate('jojo'));
+    currentCallback('a', new Predicate('iggy pop'));
+    currentCallback('d', new Predicate('iggy pop'));
+    console.log(currentCallback());
+  }
+  testTheCallback();
 
 })();
