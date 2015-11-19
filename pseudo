@@ -26,3 +26,7 @@ is it a predicate?
 thungs to fux (wit)
 put PRECONDITIONS on strips.stack, not ADD list
 one of which will be a statement we will need to evaluate.
+
+
+write out the pseudocode of strips()
+put console.log statements in place to generate the pseudocode itself
