@@ -204,18 +204,17 @@
    * @param {Array} members - the language of this problem
    * @param move - the operation, of the form of a member of ops, which will begin this subproblem
    * @param {Array} thisPlan -
+   * @param {int} depth - track recursion depth
    * @returns {boolean}
    */
-  function strips(ops,members,move,thisPlan) {
-    //console.log('booting a new strips function with triedMoves array:');
-    //console.log(thisPlan);
-
-    //if (thisPlan.length > 40) {
-    //  return false;
-    //}
+  function strips(ops,members,move,goal,thisPlan,depth) {
+    if (depth > 3) {
+      return;
+    }
     // expand the statement vertically
     var stack = move.p.expand();
     var triedMoves = thisPlan.slice(); // makes a copy of the thisPlan array, so this branch has it's own record
+    console.log('triedMoves.length: ' + triedMoves.length);
     for (var i = stack.length-1; i >= 0; --i) {
       // if we are looking at the top of the stack
       // ,and the predicate at this location is present in the current state
@@ -227,28 +226,33 @@
       } else {
         if (stack[i].list.length == 1) {
           var possibleMoves = ops.generateOperations(stack[i],members);
+
+          // prevents repetitions of most recent move configurations
           for (var j = possibleMoves.length-1; j >= 0; --j) {
             var thisPossibleMoveName = possibleMoves[j].name;
             for (var k = triedMoves.length-1; k >= 0; --k) {
-              var checkTriedMove = moveNameFromString(triedMoves[k]);
-              //console.log('comparing if ' + thisPossibleMoveName + ' includes the move name from string ' + checkTriedMove);
-              //console.log('includes() results in ' + (thisPossibleMoveName.includes(checkTriedMove)));
-              //console.log('=== results in ' + thisPossibleMoveName === checkTriedMove);
-              if (thisPossibleMoveName.includes(checkTriedMove)) {
+              var checkTriedMove = triedMoves[k];
+              console.log('does ' + thisPossibleMoveName + ' include ' + moveNameFromString(checkTriedMove) + '? ' + (thisPossibleMoveName.includes(moveNameFromString(checkTriedMove))));
+              if (thisPossibleMoveName.includes(moveNameFromString(checkTriedMove))) {
+                console.log('does ' + thisPossibleMoveName + ' === ' + checkTriedMove + '? ' + (thisPossibleMoveName === checkTriedMove));
                 if (thisPossibleMoveName === checkTriedMove) {
-                  //console.log('removed duplicate move: ' + possibleMoves[j].name);
                   possibleMoves.splice(j, 1);
                   removedDuplicateInTriedMoves = true;
                 }
-                // we were only interested in any match with the one most recent call to this function
-                k = -1;  // break the loop
+                // we were only interested in any match with the one most recent call to this function,
+                // unless it is stack() or unstack(), which only happen once per configuration
+                if (!thisPossibleMoveName.includes('stack')) {
+                  k = -1;  // break the loop
+                  console.log('break the loop')
+                }
               }
             }
           }
+
           // evaluate better moves
           for (var j = possibleMoves.length-1; j >= 0; --j) {
-            if (goalState.containsOne(possibleMoves[j].a)) {
-              if (goalState.containsAll(possibleMoves[j].a)) {
+            if (goal.containsOne(possibleMoves[j].a) && !currentCallback().containsOne(possibleMoves[j].a)) {
+              if (goal.containsAll(possibleMoves[j].a)) {
                 // best possible
                 possibleMoves[j].heuristic = 2;
               } else {
@@ -264,45 +268,32 @@
           possibleMoves.sort(function moveHeuristicSort (a,b){
             return a.heuristic - b.heuristic;
           });
-          //console.log('sorted list of possible moves');
-          //console.log(possibleMoves);
+
+          console.log('possible moves');
+          console.log(possibleMoves);
           // try moves
           for (var j = possibleMoves.length-1; j >= 0; --j) {
-            //console.log('trying the possible move ' + possibleMoves[j].name + ' because it is not in the triedMoves array');
+            var thisPossibleMoveName = possibleMoves[j].name;
             triedMoves.push(thisPossibleMoveName);
-            if (strips(ops,members,possibleMoves[j],triedMoves)) {
-              //console.log('STRIPS returned TRUE so we should pop ' + stack[i].list[0].name);
-              //console.log('and modify the current state');
-              //console.log('found a valid new move. modifying current state. before:');
-              //console.log(currentCallback());
+            console.log('"tried" moves');
+            console.log(triedMoves);
+            if (strips(ops,members,possibleMoves[j],goal,triedMoves,(depth+1))) {
               currentCallback('d',possibleMoves[j].d);
               currentCallback('a',possibleMoves[j].a);
-              //console.log('after applying ' + possibleMoves[j].name + ':');
-              //console.log(currentCallback());
               planCallback(thisPossibleMoveName);
               stack.pop();
               j = -1; // we're done applying moves to the predicate we just deleted, bro
-              //if (goalState.containsAll(currentCallback())) {
-              //  return true;
-              //}
             } else {
               // nope. bad move. remove it. try another move.
               triedMoves.pop();
             }
           }
         } else {
-          // if stack[i].list.length > 1 then it's the precondition list for the move that called this instance of STRIPS
-          // in which case, this shit it totally bunk and we should toss it.
-          // toss it.
-          //return false;
+          // nothing, and eventually, this function will return false.
         }
-
       }
-      // hey, end of the i loop
-      // but, if we got here without clearing out the array 'stack', then, we want to return an empty plan[]
-      // if the array is empty.. really?  cool!  then return thisPlan.  or return nothing?  what's uh the deal?
     }
-    //console.log('returning from an outer call based on the move ' + move.name + ' with stack.length==0 being ' + ((stack.length == 0)? 'true':'false'));
+    console.log('returning from an outer call based on the move ' + move.name + ' with stack.length==0 being ' + ((stack.length == 0)? 'true':'false'));
     //if (goalState.containsAll(currentCallback())) {
     //  return true;
     //}
@@ -389,7 +380,7 @@
   //var copiedToVar = someOp[0].name;
   //console.log('should really be true since ' + copiedToVar + ' === stack(A,B): ' + (copiedToVar === 'stack(A,B)'));
   console.log('begin');
-  console.log('STRIPS evaluated to: ' + strips(ops,members,goal,[]));
+  console.log('STRIPS evaluated to: ' + strips(ops,members,goal,goalState,[/*'stack(C,A)'*/],1));
   var final = currentCallback().list;
   console.log('final list');
   for (var i = 0; i < final.length; ++i) {
@@ -401,4 +392,36 @@
   }
   console.log('plan list');
   console.log(planCallback());
+
+/*  function removeRecentDuplicate(possibleMoves,triedMoves) {
+    for (var j = possibleMoves.length-1; j >= 0; --j) {
+      var thisPossibleMoveName = possibleMoves[j].name;
+      for (var k = triedMoves.length-1; k >= 0; --k) {
+        var checkTriedMove = moveNameFromString(triedMoves[k]);
+        if (thisPossibleMoveName.includes(checkTriedMove)) {
+          if (thisPossibleMoveName === checkTriedMove) {
+            possibleMoves.splice(j, 1);
+            removedDuplicateInTriedMoves = true;
+          }
+          // we were only interested in any match with the one most recent call to this function
+          k = -1;
+          j = -1; // break the loop
+        }
+      }
+    }
+  }
+
+  var possibleTest = [
+    {name: 'carlos'},
+    {name: 'jet city'},
+    {name: 'carlos'}
+  ];
+  var triedTest = [
+    "layla",
+    "carlos",
+    "semiotic transducophibliousness"
+  ];
+  removeRecentDuplicate(possibleTest,triedTest);
+  console.log(possibleTest);
+  console.log(triedTest);*/
 })();
