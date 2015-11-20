@@ -203,12 +203,13 @@
    * @param {function} ops - a function with a member function, generateOptions, which takes a stack and a language as its parameters
    * @param {Array} members - the language of this problem
    * @param move - the operation, of the form of a member of ops, which will begin this subproblem
+   * @param goal - the goal state, which doesn't get mutated
    * @param {Array} thisPlan -
    * @param {int} depth - track recursion depth
    * @returns {boolean}
    */
   function strips(ops,members,move,goal,thisPlan,depth) {
-    if (depth > 3) {
+    if (depth > 4) {
       return;
     }
     // expand the statement vertically
@@ -230,8 +231,8 @@
           // prevents repetitions of most recent move configurations
           for (var j = possibleMoves.length-1; j >= 0; --j) {
             var thisPossibleMoveName = possibleMoves[j].name;
-            for (var k = triedMoves.length-1; k >= 0; --k) {
-              var checkTriedMove = triedMoves[k];
+            for (var k = thisPlan.length-1; k >= 0; --k) {
+              var checkTriedMove = thisPlan[k];
               console.log('does ' + thisPossibleMoveName + ' include ' + moveNameFromString(checkTriedMove) + '? ' + (thisPossibleMoveName.includes(moveNameFromString(checkTriedMove))));
               if (thisPossibleMoveName.includes(moveNameFromString(checkTriedMove))) {
                 console.log('does ' + thisPossibleMoveName + ' === ' + checkTriedMove + '? ' + (thisPossibleMoveName === checkTriedMove));
@@ -242,8 +243,8 @@
                 // we were only interested in any match with the one most recent call to this function,
                 // unless it is stack() or unstack(), which only happen once per configuration
                 if (!thisPossibleMoveName.includes('stack')) {
-                  k = -1;  // break the loop
-                  console.log('break the loop')
+                  console.log('break the loop');
+                  break;//k = -1;  // break the loop
                 }
               }
             }
@@ -251,7 +252,7 @@
 
           // evaluate better moves
           for (var j = possibleMoves.length-1; j >= 0; --j) {
-            if (goal.containsOne(possibleMoves[j].a) && !currentCallback().containsOne(possibleMoves[j].a)) {
+            if (goal.containsOne(possibleMoves[j].a)/* && !currentCallback().containsOne(possibleMoves[j].a)*/) {
               if (goal.containsAll(possibleMoves[j].a)) {
                 // best possible
                 possibleMoves[j].heuristic = 2;
@@ -278,13 +279,15 @@
             console.log('"tried" moves');
             console.log(triedMoves);
             if (strips(ops,members,possibleMoves[j],goal,triedMoves,(depth+1))) {
+              document.write('<p>applying the move ' + thisPossibleMoveName + '</p>');
               currentCallback('d',possibleMoves[j].d);
               currentCallback('a',possibleMoves[j].a);
               planCallback(thisPossibleMoveName);
               stack.pop();
               j = -1; // we're done applying moves to the predicate we just deleted, bro
-            } else {
-              // nope. bad move. remove it. try another move.
+            } else if (thisPlan.length != 0){
+              // nope. bad move. remove it. try another move. unless you're the head of the recursion tree.
+              // then it's ok to try again later.
               triedMoves.pop();
             }
           }
@@ -315,7 +318,8 @@
     new Predicate('on', 'C', 'A'),
     new Predicate('on', 'B', 'D'),
     new Predicate('ontable', 'A'),
-    new Predicate('ontable', 'D')
+    new Predicate('ontable', 'D'),
+    new Predicate('armempty')
   ]);
   var goal = {
     name: 'goal',
@@ -379,19 +383,24 @@
   //console.log('should also be true: ' + someOp[0].name === 'stack(A,B)');
   //var copiedToVar = someOp[0].name;
   //console.log('should really be true since ' + copiedToVar + ' === stack(A,B): ' + (copiedToVar === 'stack(A,B)'));
-  console.log('begin');
+  document.write('<h1>begin</h1>');
   console.log('STRIPS evaluated to: ' + strips(ops,members,goal,goalState,[/*'stack(C,A)'*/],1));
   var final = currentCallback().list;
-  console.log('final list');
+  document.write('<h5>final list</h5><p>');
   for (var i = 0; i < final.length; ++i) {
-    console.log(final[i].toString())
+    document.write(final[i].toString()+'  ')
   }
-  console.log('should be');
+  document.write('</p>');
+  document.write('<h5>should be</h5><p>');
   for (var i = 0; i < goalState.list.length; ++i) {
-    console.log(goalState.list[i].toString())
+    document.write(goalState.list[i].toString()+'  ')
   }
-  console.log('plan list');
-  console.log(planCallback());
+  document.write('</p>');
+  document.write('<h5>plan list</h5><p>');
+  for (var i = 0; i < planCallback().length; ++i) {
+    document.write(planCallback()[i]+'  ');
+  }
+  document.write('</p>');
 
 /*  function removeRecentDuplicate(possibleMoves,triedMoves) {
     for (var j = possibleMoves.length-1; j >= 0; --j) {
