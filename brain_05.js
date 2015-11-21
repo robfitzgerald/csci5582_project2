@@ -15,7 +15,7 @@
     this.equalTo = equalTo;
     this.toString = toString;
     function equalTo(p) {
-      return ((this.name == p.name) && (this.x == p.x) && (this.y == p.y));
+      return ((this.name === p.name) && (this.x === p.x) && (this.y === p.y));
     }
     function toString() {
       if (this.y != null) {
@@ -238,7 +238,6 @@
                 console.log('does ' + thisPossibleMoveName + ' === ' + checkTriedMove + '? ' + (thisPossibleMoveName === checkTriedMove));
                 if (thisPossibleMoveName === checkTriedMove) {
                   possibleMoves.splice(j, 1);
-                  removedDuplicateInTriedMoves = true;
                 }
                 // we were only interested in any match with the one most recent call to this function,
                 // unless it is stack() or unstack(), which only happen once per configuration
@@ -310,7 +309,7 @@
     new Predicate('ontable', 'C'),
     new Predicate('ontable', 'D'),
     new Predicate('armempty'),
-    new Predicate('clear', 'A'),
+    new Predicate('clear', 'B'),
     new Predicate('clear', 'C'),
     new Predicate('clear', 'D')
   ]);
