@@ -210,31 +210,34 @@
    * @returns {boolean}
    */
   function strips(ops,members,move,current,goal,thisPlan,depth) {
-    if (depth > 9) {
+    if (depth > 3) {
       //console.log('returning from depth ' + depth + ' because of depth check at beginning of function ');
       return {
+        validBranch: false,
         current: deepCopy(current),
         triedMoves: deepCopy(thisPlan)
       }
     }
-    // expand the statement vertically
+    //console.log('tryin out ' + move.name);
     var stack = move.p.expand();
     var thisCurrent = deepCopy(current);
-    var triedMoves = deepCopy(thisPlan); // makes a copy of the thisPlan array, so this branch has it's own record
+    var triedMoves = deepCopy(thisPlan);
     for (var i = stack.length-1; i >= 0; --i) {
+      //console.log('at depth ' + depth + ' at ' + i + 'th member of the stack of length ' + stack.length)
       // if we are looking at the top of the stack
       // ,and the predicate at this location is present in the current state
       if (
         (i == stack.length-1) &&
         thisCurrent.containsAll(stack[i])
       ) {
+        //console.log('stack.pop()');
         stack.pop();
       } else {
         if (stack[i].list.length == 1) {
           var possibleMoves = ops.generateOperations(stack[i],members);
 
           // prevents repetitions of most recent move configurations
-          for (var j = possibleMoves.length-1; j >= 0; --j) {
+/*          for (var j = possibleMoves.length-1; j >= 0; --j) {
             var thisPossibleMoveName = possibleMoves[j].name;
             for (var k = thisPlan.length-1; k >= 0; --k) {
               var checkTriedMove = thisPlan[k];
@@ -244,16 +247,16 @@
                 }
                 // we were only interested in any match with the one most recent call to this function,
                 // unless it is stack() or unstack(), which only happen once per configuration
-                if (!thisPossibleMoveName.includes('stack')) {
-                  break;
-                }
+                //if (!thisPossibleMoveName.includes('stack')) {
+                //  break;
+                //}
               }
             }
-          }
+          }*/
 
           // evaluate better moves
-          for (var j = possibleMoves.length-1; j >= 0; --j) {
-            if (goal.containsOne(possibleMoves[j].a)/* && !currentCallback().containsOne(possibleMoves[j].a)*/) {
+/*          for (var j = possibleMoves.length-1; j >= 0; --j) {
+            if (goal.containsOne(possibleMoves[j].a)/!* && !currentCallback().containsOne(possibleMoves[j].a)*!/) {
               if (goal.containsAll(possibleMoves[j].a)) {
                 // best possible
                 possibleMoves[j].heuristic = 2;
@@ -265,18 +268,18 @@
               // hmm. this doesn't help so much
               possibleMoves[j].heuristic = 0;
             }
-          }
+          }*/
           // sort ascending, since we will move through array in descending order, and higher numbers are better
-          possibleMoves.sort(function moveHeuristicSort (a,b){
+/*          possibleMoves.sort(function moveHeuristicSort (a,b){
             return a.heuristic - b.heuristic;
-          });
+          });*/
+
+          //console.log(possibleMoves);
 
           // try moves
           for (var j = possibleMoves.length-1; j >= 0; --j) {
             var thisPossibleMoveName = possibleMoves[j].name;
             triedMoves.push(thisPossibleMoveName);
-            //console.log('"tried" moves');
-            //console.log(triedMoves);
             var recurse = strips(ops,members,possibleMoves[j],thisCurrent,goal,triedMoves,(depth+1));
             //console.log('triedMoves');
             //console.log(triedMoves);
@@ -286,7 +289,7 @@
             //console.log(recurse.current);
             if (recurse.validBranch) {
               triedMoves = deepCopy(recurse.triedMoves);
-              console.log('applying move ' + thisPossibleMoveName);
+              //console.log('applying move ' + thisPossibleMoveName);
               //document.write('<p>applying the move ' + thisPossibleMoveName + '</p>');
               thisCurrent.deleteStatement(possibleMoves[j].d);
               thisCurrent.addStatement(possibleMoves[j].a);
@@ -367,37 +370,66 @@
     new Predicate('ontable', 'D'),
     new Predicate('armempty')
   ]);
+
   var goalMove = {
     name: 'goal',
     p: goalState,
     a: new Statement(),
     d: new Statement()
   };
+
+  var  testStart = new Statement([
+    new Predicate('ontable', 'A'),
+    new Predicate('ontable', 'B'),
+    new Predicate('armempty'),
+    new Predicate('clear', 'A'),
+    new Predicate('clear', 'B')
+  ]);
+  var testGoal = new Statement([
+    new Predicate('on', 'A', 'B')
+  ]);
+  var testMove = {
+    name: 'goal',
+    p: testGoal,
+    a: new Statement(),
+    d: new Statement()
+  };
+
   var members = [
     'A', 'B', 'C', 'D'
   ];
   var ops = blocksWorldOperations();
+  var result =  strips(ops,members,goalMove,startState,goalState,[],1);
+  var testResult =  strips(ops,members,testMove,testStart,testGoal,[/*'stack(C,A)'*/],1);
 
-  var result =  strips(ops,members,goalMove,startState,goalState,[/*'stack(C,A)'*/],1);
-  document.write('<h2>STRIPS result valid?: ' + result.validBranch + '</h2>');
-  document.write('<h5>start state</h5><p>');
-  for (var i = 0; i < result.current.list.length; ++i) {
-    document.write(startState.list[i].toString()+'  ')
+  output(testStart,testGoal,testResult);
+  output(startState,goalState,result);
+
+  function output(startState,goalState,result) {
+    document.write('<h2>STRIPS result valid?: ' + result.validBranch + '</h2>');
+    document.write('<h5>start state</h5><p>');
+    for (var i = 0; i < startState.list.length; ++i) {
+      document.write(startState.list[i].toString()+'  ')
+    }
+    document.write('</p>');
+
+    document.write('<h5>resulting goal state via STRIPS</h5><p>');
+    for (var i = 0; i < result.current.list.length; ++i) {
+      document.write(result.current.list[i].toString()+'  ')
+    }
+    document.write('</p>');
+
+    document.write('<h5>goal state provided to STRIPS</h5><p>');
+    for (var i = 0; i < goalState.list.length; ++i) {
+      document.write(goalState.list[i].toString()+'  ')
+    }
+    document.write('</p>');
+
+    document.write('<h5>plan list</h5><p>');
+    for (var i = result.triedMoves.length-1; i >= 0; --i) {
+      document.write(result.triedMoves[i]+'  ');
+    }
+    document.write('</p>');
   }
-  document.write('<h5>resulting goal state via STRIPS</h5><p>');
-  for (var i = 0; i < result.current.list.length; ++i) {
-    document.write(result.current.list[i].toString()+'  ')
-  }
-  document.write('</p>');
-  document.write('<h5>goal state provided to STRIPS</h5><p>');
-  for (var i = 0; i < goalState.list.length; ++i) {
-    document.write(goalState.list[i].toString()+'  ')
-  }
-  document.write('</p>');
-  document.write('<h5>plan list</h5><p>');
-  for (var i = 0; i < result.triedMoves.length; ++i) {
-    document.write(result.triedMoves[i]+'  ');
-  }
-  document.write('</p>');
 
 })();
