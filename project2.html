@@ -2,10 +2,29 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Fitzgerald Project 2</title>
+    <title>Fitzgerald Artificial Intelligence Project 2</title>
+    <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.1/css/materialize.min.css">
+    <link rel="stylesheet" href="app.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body>
-    <p>Stack-Based STRIPS Blocks World Example</p>
-    <script src="./brain_05.js"></script>
+<body ng-app="project2">
+    <h1>Stack-Based STRIPS Blocks World</h1>
+    <div class="container">
+        <nav class="row">
+            <a class="col s4 m4 l4 center-align" ui-sref="ex1">Example 1</a>
+            <a class="col s4 m4 l4 center-align" ui-sref="ex2">Example 2</a>
+            <a class="col s4 m4 l4 center-align" ui-sref="ex3">Example 3</a>
+        </nav>
+    </div>
+
+
+    <div ui-view></div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.0-beta.2/angular.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-ui-router/0.2.15/angular-ui-router.js"></script>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.1/js/materialize.min.js"></script>
+    <script src="project2.module.js"></script>
 </body>
 </html>
