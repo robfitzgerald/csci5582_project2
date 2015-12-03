@@ -189,7 +189,7 @@
             }
             var unstack = new Op_unstack(members[i], members[j]);
             if (current.containsOne(unstack.a)) {
-              ops.push(stack);
+              ops.push(unstack);
             }
           }
         }
@@ -210,7 +210,7 @@
    * @returns {boolean}
    */
   function strips(ops,members,move,current,goal,thisPlan,depth) {
-    if (depth > 3) {
+    if (depth > 20) {
       //console.log('returning from depth ' + depth + ' because of depth check at beginning of function ');
       return {
         validBranch: false,
@@ -223,105 +223,149 @@
     var thisCurrent = deepCopy(current);
     var triedMoves = deepCopy(thisPlan);
     for (var i = stack.length-1; i >= 0; --i) {
-      //console.log('at depth ' + depth + ' at ' + i + 'th member of the stack of length ' + stack.length)
+      //console.log('at depth ' + depth + ' at ' + i + 'th member of the stack of length ' + stack.length);
       // if we are looking at the top of the stack
       // ,and the predicate at this location is present in the current state
-      if (
-        (i == stack.length-1) &&
-        thisCurrent.containsAll(stack[i])
-      ) {
-        //console.log('stack.pop()');
-        stack.pop();
-      } else {
-        if (stack[i].list.length == 1) {
-          var possibleMoves = ops.generateOperations(stack[i],members);
 
-          // prevents repetitions of most recent move configurations
-/*          for (var j = possibleMoves.length-1; j >= 0; --j) {
-            var thisPossibleMoveName = possibleMoves[j].name;
-            for (var k = thisPlan.length-1; k >= 0; --k) {
-              var checkTriedMove = thisPlan[k];
-              if (thisPossibleMoveName.includes(moveNameFromString(checkTriedMove))) {
-                if (thisPossibleMoveName === checkTriedMove) {
-                  possibleMoves.splice(j, 1);
-                }
-                // we were only interested in any match with the one most recent call to this function,
-                // unless it is stack() or unstack(), which only happen once per configuration
-                //if (!thisPossibleMoveName.includes('stack')) {
-                //  break;
-                //}
-              }
-            }
-          }*/
-
-          // evaluate better moves
-/*          for (var j = possibleMoves.length-1; j >= 0; --j) {
-            if (goal.containsOne(possibleMoves[j].a)/!* && !currentCallback().containsOne(possibleMoves[j].a)*!/) {
-              if (goal.containsAll(possibleMoves[j].a)) {
-                // best possible
-                possibleMoves[j].heuristic = 2;
-              } else {
-                // still worth noting
-                possibleMoves[j].heuristic = 1;
-              }
-            } else {
-              // hmm. this doesn't help so much
-              possibleMoves[j].heuristic = 0;
-            }
-          }*/
-          // sort ascending, since we will move through array in descending order, and higher numbers are better
-/*          possibleMoves.sort(function moveHeuristicSort (a,b){
-            return a.heuristic - b.heuristic;
-          });*/
-
-          //console.log(possibleMoves);
-
-          // try moves
-          for (var j = possibleMoves.length-1; j >= 0; --j) {
-            var thisPossibleMoveName = possibleMoves[j].name;
-            triedMoves.push(thisPossibleMoveName);
-            var recurse = strips(ops,members,possibleMoves[j],thisCurrent,goal,triedMoves,(depth+1));
-            //console.log('triedMoves');
-            //console.log(triedMoves);
-            //console.log('recurse.triedMoves');
-            //console.log(recurse.triedMoves);
-            //console.log('recurse.current');
-            //console.log(recurse.current);
-            if (recurse.validBranch) {
-              triedMoves = deepCopy(recurse.triedMoves);
-              //console.log('applying move ' + thisPossibleMoveName);
-              //document.write('<p>applying the move ' + thisPossibleMoveName + '</p>');
-              thisCurrent.deleteStatement(possibleMoves[j].d);
-              thisCurrent.addStatement(possibleMoves[j].a);
-              stack.pop();
-              break; // we're done applying moves to the predicate we just deleted, bro
-            } else {
-              // nope. bad move. remove it. try another move. unless you're the head of the recursion tree.
-              // then it's ok to try again later.
-              triedMoves.pop();
-            }
+      if (i == 0) {
+        if (thisCurrent.containsAll(stack[i])) {
+          //console.log('ran a move and it worked! depth ' + depth)
+          return {
+            validBranch: true,
+            current: deepCopy(thisCurrent),
+            triedMoves: deepCopy(triedMoves)
           }
         } else {
-          // nothing, and eventually, this function will return false.
+          //console.log('ran a move and it sucked. depth ' + depth)
+          return {
+            validBranch: false,
+            current: deepCopy(current),
+            triedMoves: deepCopy(thisPlan)
+          }
+        }
+      } else if ((i == stack.length - 1) && thisCurrent.containsAll(stack[i])) {
+        stack.pop();
+      }  else {
+        var possibleMoves = ops.generateOperations(stack[i],members);
+        //console.log(possibleMoves);
+
+        // prevents repetitions of most recent move configurations
+
+        for (var j = possibleMoves.length-1; j >= 0; --j) {
+          var thisPossibleMoveName = possibleMoves[j].name;
+          for (var k = triedMoves.length-1; k >= 0; --k) {
+            var previousMove = triedMoves[k];
+            if (thisPossibleMoveName.includes(moveNameFromString(previousMove))) {
+              if ((thisPossibleMoveName === previousMove) && (k == triedMoves.length-1)) {
+                //console.log('would have deleted a possible ' + thisPossibleMoveName + ' from this possibleMoves whos top is '+ previousMove +', depth ' + depth)
+                possibleMoves.splice(j, 1);
+                k = -1;
+              } else if (thisPossibleMoveName.includes('stack') || (thisPossibleMoveName.includes('unstack'))) {
+                if (thisPossibleMoveName === previousMove) {
+                  //console.log('deleting a possible ' + thisPossibleMoveName + ' from this possibleMoves which has '+ previousMove +', depth ' + depth)
+                  possibleMoves.splice(j, 1);
+                  k = -1;
+                }
+              }
+
+              // we were only interested in any match with the one most recent call to this function,
+              // unless it is stack() or unstack(), which only happen once per configuration
+              //if (!thisPossibleMoveName.includes('stack')) {
+              //  break;
+              //}
+            }
+          }
+        }
+
+
+        // evaluate better moves
+        for (var j = possibleMoves.length-1; j >= 0; --j) {
+          if (goal.containsOne(possibleMoves[j].a)/* && !thisCurrent.containsOne(possibleMoves[j].a)*/) {
+            if (goal.containsAll(possibleMoves[j].a)) {
+              // best possible
+              possibleMoves[j].heuristic = 8;
+            } else {
+              // still worth noting
+              possibleMoves[j].heuristic = 4;
+            }
+          } else {
+            // hmm. this doesn't help so much
+            possibleMoves[j].heuristic = 0;
+          }
+          if (thisCurrent.containsOne(possibleMoves[j].p)/* && !thisCurrent.containsOne(possibleMoves[j].a)*/) {
+            if (thisCurrent.containsAll(possibleMoves[j].p)) {
+              // best possible
+              possibleMoves[j].heuristic += 2;
+            } else {
+              // still worth noting
+              possibleMoves[j].heuristic += 1;
+            }
+          } else {
+            // hmm. this doesn't help so much
+            possibleMoves[j].heuristic += 0;
+          }
+        }
+
+        for (var j = possibleMoves.length-1; j >= 0; --j) {
+          if (possibleMoves[j].heuristic == 0) {
+            //console.log('deleting move of heuristic ' + possibleMoves[j].heuristic)
+            possibleMoves.splice(j,1);
+          }
+        }
+
+        // sort ascending, since we will move through array in descending order, and higher numbers are better
+        possibleMoves.sort(function moveHeuristicSort (a,b){
+          return a.heuristic - b.heuristic;
+        });
+
+        //console.log('stack[' + i + ']');
+        //console.log(stack[i])
+        //console.log('thisCurrent.length ' + thisCurrent.length);
+        //console.log(thisCurrent);
+        //console.log('possibleMoves.length ' + possibleMoves.length);
+        //console.log(possibleMoves);
+
+        // try moves
+        for (var j = possibleMoves.length-1; j >= 0; --j) {
+          var thisPossibleMoveName = possibleMoves[j].name;
+          triedMoves.push(thisPossibleMoveName);
+          var recurse = strips(ops,members,possibleMoves[j],thisCurrent,goal,triedMoves,(depth+1));
+          //console.log('triedMoves');
+          //console.log(triedMoves);
+          //console.log('recurse.triedMoves');
+          //console.log(recurs  e.triedMoves);
+          //console.log('recurse.current');
+          //console.log(recurse.current);
+          if (recurse.validBranch) {
+            triedMoves = deepCopy(recurse.triedMoves);
+            thisCurrent = deepCopy(recurse.current);
+            //console.log('applying move ' + thisPossibleMoveName);
+            //document.write('<p>applying the move ' + thisPossibleMoveName + '</p>');
+            thisCurrent.deleteStatement(possibleMoves[j].d);
+            thisCurrent.addStatement(possibleMoves[j].a);
+  //////shouldnt have to do this///////
+/*            if (thisCurrent.containsAll(goal)) {
+              console.log('did it! goal equals current. callin er done at depth ' + depth)
+              return {
+                validBranch: true,
+                current: deepCopy(thisCurrent),
+                triedMoves: deepCopy(triedMoves)
+              }
+            }*/
+            stack.pop();
+            j = -1; // we're done applying moves to the predicate we just deleted, bro
+          } else {
+            // nope. bad move. remove it. try another move.
+            triedMoves.pop();
+          }
         }
       }
     }
-
-    if (stack.length==0) {
-      //console.log('returning modified stuff cuz it was all good');
-      //console.log('and this should be true: ' + (triedMoves.length > thisPlan.length));
-      return {
-        validBranch: true,
-        current: deepCopy(thisCurrent),
-        triedMoves: deepCopy(triedMoves)
-      }
-    } else {
-      //console.log('returning original stuff because stuff was bad news');
-      return {
-        validBranch: false,
-        current: current,
-        triedMoves: thisPlan
-      }
+    console.log('got here. shouldnt. ever.');
+    return {
+      validBranch: false,
+      current: current,
+      triedMoves: thisPlan
     }
   }
 
@@ -381,6 +425,29 @@
   var  testStart = new Statement([
     new Predicate('ontable', 'A'),
     new Predicate('ontable', 'B'),
+    new Predicate('ontable', 'C'),
+    new Predicate('ontable', 'D'),
+    new Predicate('armempty'),
+    new Predicate('clear', 'A'),
+    new Predicate('clear', 'B'),
+    new Predicate('clear', 'C'),
+    new Predicate('clear', 'D')
+  ]);
+  var testGoal = new Statement([
+    new Predicate('on', 'A', 'B'),
+    new Predicate('on', 'C', 'D')
+  ]);
+  var testMove = {
+    name: 'goal',
+    p: testGoal,
+    a: new Statement(),
+    d: new Statement()
+  };
+
+/*
+  var  testStart = new Statement([
+    new Predicate('ontable', 'A'),
+    new Predicate('ontable', 'B'),
     new Predicate('armempty'),
     new Predicate('clear', 'A'),
     new Predicate('clear', 'B')
@@ -394,6 +461,8 @@
     a: new Statement(),
     d: new Statement()
   };
+*/
+
 
   var members = [
     'A', 'B', 'C', 'D'
