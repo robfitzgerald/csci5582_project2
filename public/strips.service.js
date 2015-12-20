@@ -354,9 +354,6 @@
     var thisCurrent = deepCopy(current);
     var triedMoves = deepCopy(thisPlan);
     for (var i = stack.length-1; i >= 0; --i) {
-      // if we are looking at the top of the stack
-      // ,and the predicate at this location is present in the current state
-
       if (i == 0) {
         if (thisCurrent.containsAll(stack[i])) {
           return {
@@ -376,25 +373,25 @@
       }  else {
         var possibleMoves = ops.generateOperations(stack[i],members);
 
-        // prevents repetitions of most recent move configurations
-
-        for (var j = possibleMoves.length-1; j >= 0; --j) {
-          var thisPossibleMoveName = possibleMoves[j].name;
-          for (var k = triedMoves.length-1; k >= 0; --k) {
-            var previousMove = triedMoves[k].name;
-            if (thisPossibleMoveName.indexOf(moveNameFromString(previousMove)) != -1) {
-              if ((thisPossibleMoveName === previousMove) && (k == triedMoves.length-1)) {
-                possibleMoves.splice(j, 1);
-                k = -1;
-              } else if (thisPossibleMoveName.indexOf('stack') != -1 || (thisPossibleMoveName.indexOf('unstack') != -1)) {
-                if (thisPossibleMoveName === previousMove) {
-                  possibleMoves.splice(j, 1);
-                  k = -1;
-                }
-              }
-            }
-          }
-        }
+        // cull possible moves
+        cullPossibleMoves(possibleMoves,triedMoves);
+        // for (var j = possibleMoves.length-1; j >= 0; --j) {
+        //   var thisPossibleMoveName = possibleMoves[j].name;
+        //   for (var k = triedMoves.length-1; k >= 0; --k) {
+        //     var previousMove = triedMoves[k].name;
+        //     if (thisPossibleMoveName.indexOf(moveNameFromString(previousMove)) != -1) {
+        //       if ((thisPossibleMoveName === previousMove) && (k == triedMoves.length-1)) {
+        //         possibleMoves.splice(j, 1);
+        //         k = -1;
+        //       } else if (thisPossibleMoveName.indexOf('stack') != -1 || (thisPossibleMoveName.indexOf('unstack') != -1)) {
+        //         if (thisPossibleMoveName === previousMove) {
+        //           possibleMoves.splice(j, 1);
+        //           k = -1;
+        //         }
+        //       }
+        //     }
+        //   }
+        // }
 
 
         // evaluate better moves
@@ -436,6 +433,10 @@
           return a.heuristic - b.heuristic;
         });
 
+        // possibleMoves.forEach(function(move,index,moves) {
+        //   console.log(move.name + ' has heuristic ' + move.heuristic);
+        // });
+
         // try moves
         for (var j = possibleMoves.length-1; j >= 0; --j) {
           var thisPossibleMoveName = possibleMoves[j].name;
@@ -455,6 +456,44 @@
         }
       }
     }
+  }
+
+  // TODO: maybe could be rewritten without being O(n^2)
+  // triedMoves is idempotent through this procedure
+  function cullPossibleMoves(possibleMoves,triedMoves) {
+
+    // no matter the move, don't do it twice in a row
+    for (var j = possibleMoves.length-1; j >= 0; --j) {
+      var thisPossibleMoveName = possibleMoves[j].name;
+      for (var k = triedMoves.length-1; k >= 0; --k) {
+        var previousMove = triedMoves[k].name;
+        if (thisPossibleMoveName.indexOf(moveNameFromString(previousMove)) != -1) {
+          if ((thisPossibleMoveName === previousMove) && (k == triedMoves.length-1)) {
+            possibleMoves.splice(j, 1);
+            k = -1;
+          }
+        }
+      }
+    }
+
+    // if we are stacking or unstacking
+    // make sure we only ever use stack or unstack with
+    // this exact list of parameters once in a list of triedMoves
+    for (var j = possibleMoves.length-1; j >= 0; --j) {
+      var thisPossibleMoveName = possibleMoves[j].name;
+      for (var k = triedMoves.length-1; k >= 0; --k) {
+        var previousMove = triedMoves[k].name;
+        if (thisPossibleMoveName.indexOf('stack') != -1 || (thisPossibleMoveName.indexOf('unstack') != -1)) {
+          if (thisPossibleMoveName === previousMove) {
+            possibleMoves.splice(j, 1);
+            k = -1;
+          }
+        }
+      }  
+    }    
+
+    // we can only putdown what we most recently picked up
+
   }
 
   function moveNameFromString(str) {
