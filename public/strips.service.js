@@ -16,10 +16,10 @@
       var deferred = $q.defer();
       runstrips(ops,members1,ex1Goal,ex1Start,ex1GoalState,[],1,function(result) {
         deferred.resolve({
-          moves: result.triedMoves,
-          start: ex1Start.list,
-          goal: ex1GoalState.list
-      });
+          moves: result.moves,
+          current: ex1Start,
+          goal: ex1GoalState
+        });
       });
       return deferred.promise;
     }
@@ -28,9 +28,9 @@
       var deferred = $q.defer();
       runstrips(ops,members2,ex2Goal,ex2Start,ex2GoalState,[],1,function(result) {
         deferred.resolve({
-          moves: result.triedMoves,
-          start: ex2Start.list,
-          goal: ex2GoalState.list
+          moves: result.moves,
+          current: ex2Start,
+          goal: ex2GoalState
         });
       });
       return deferred.promise;
@@ -40,9 +40,9 @@
       var deferred = $q.defer();
       runstrips(ops,members3,ex3Goal,ex3Start,ex3GoalState,[],1,function(result) {
         deferred.resolve({
-          moves: result.triedMoves,
-          start: ex3Start.list,
-          goal: ex3GoalState.list
+          moves: result.moves,
+          current: ex3Start,
+          goal: ex3GoalState
         });
       });
       return deferred.promise;
@@ -482,6 +482,11 @@
 
   function runstrips(ops,members,move,current,goal,thisPlan,depth,callback) {
     var result = strips(ops,members,move,current,goal,thisPlan,depth);
+    result.moves = [];
+    for (var i = result.triedMoves.length - 1; i >= 0; --i) {
+      result.moves.push(result.triedMoves[i]);
+    }
+    delete result.triedMoves;
     callback(result);
   }
 

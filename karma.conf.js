@@ -22,9 +22,15 @@ module.exports = function(config) {
       'public/*.module.js',
       'public/*.controller.js',
       'public/*.service.js',
-      'public/*.unit.js'
+      'public/demonstration.service.unit.js'
     ],
 
+    client: {
+      mocha: {
+        reporter: 'html',
+        timeout: 10000
+      }
+    },
 
     // list of files to exclude
     exclude: [

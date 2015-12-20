@@ -16,7 +16,7 @@
           controllerAs: 'ctrl',
           resolve: {
             result: function (StripsFactory) {
-              console.log('ex1.resolve beginning')
+              // console.log('ex1.resolve beginning')
               return StripsFactory.example1();
             }
           }
@@ -28,8 +28,12 @@
           controllerAs: 'ctrl',
           resolve: {
             result: function (StripsFactory) {
-              console.log('ex2.resolve beginning')
-              return StripsFactory.example2();
+              // console.log('ex2.resolve beginning')
+              return StripsFactory.example2()
+                .catch(function (err) {
+                  console.log('resolve fail');
+                  return err;
+                })
             }
           }
         })
@@ -40,10 +44,10 @@
           controllerAs: 'ctrl',
           resolve: {
             result: function (StripsFactory) {
-              console.log('ex3.resolve beginning')
+              // console.log('ex3.resolve beginning')
               return StripsFactory.example3()
                 .then(function (result) {
-                  console.log('resolve success')
+                  // console.log('resolve success')
                   return result;
                 })
                 .catch(function (err) {
