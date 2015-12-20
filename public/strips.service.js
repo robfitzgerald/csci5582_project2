@@ -87,7 +87,7 @@
     ]);
     var ex3Goal = {
       name: 'goal',
-      p: testGoal,
+      p: ex3GoalState,
       a: new Statement(),
       d: new Statement()
     };
@@ -112,16 +112,17 @@
 
     function example3() {
       console.log('example3() begin')
-      var promise = $q.defer();
+      var deferred = $q.defer();
       runstrips(ops,members3,ex3Goal,ex3Start,ex3GoalState,[],1,function(result) {
+        console.log('example3() end (resolving)')
         $q.resolve({
           moves: result.triedMoves,
           start: ex3Start.list,
           goal: ex3GoalState.list
         });
       });
-      console.log('example3() end (returning promise)')
-      return promise;
+      
+      return deferred.promise;
     }
 
     return StripsFactory;
@@ -376,11 +377,14 @@
           var thisPossibleMoveName = possibleMoves[j].name;
           for (var k = triedMoves.length-1; k >= 0; --k) {
             var previousMove = triedMoves[k].name;
-            if (thisPossibleMoveName.includes(moveNameFromString(previousMove))) {
+            console.log('the two things that broke:');
+            console.log(thisPossibleMoveName);
+            console.log(previousMove);
+            if (thisPossibleMoveName.indexOf(moveNameFromString(previousMove)) != -1) {
               if ((thisPossibleMoveName === previousMove) && (k == triedMoves.length-1)) {
                 possibleMoves.splice(j, 1);
                 k = -1;
-              } else if (thisPossibleMoveName.includes('stack') || (thisPossibleMoveName.includes('unstack'))) {
+              } else if (thisPossibleMoveName.indexOf('stack') != -1 || (thisPossibleMoveName.indexOf('unstack') != -1)) {
                 if (thisPossibleMoveName === previousMove) {
                   possibleMoves.splice(j, 1);
                   k = -1;
