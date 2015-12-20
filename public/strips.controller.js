@@ -39,9 +39,9 @@
             vm.result.moves[j].demoCurrent = false;
           }
           vm.result.moves[i].demoCurrent = true;
-          for(var j = 0; j < vm.result.moves.length; ++j) {
-            console.log('vm.result['+j+'].demoCurrent is ' + vm.result.moves[j].demoCurrent);
-          }
+          // for(var j = 0; j < vm.result.moves.length; ++j) {
+          //   console.log('vm.result['+j+'].demoCurrent is ' + vm.result.moves[j].demoCurrent);
+          // }
 
           if (i < vm.demo.length) {
             $timeout(function() {

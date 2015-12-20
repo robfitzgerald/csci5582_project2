@@ -1,8 +1,8 @@
 (function() {
 
   angular
-    .module('project2')
-    .factory('StripsFactory', ['$q', StripsFactory]);
+  .module('project2')
+  .factory('StripsFactory', ['$q', StripsFactory]);
 
   function StripsFactory($q) {
     var StripsFactory = {
@@ -38,7 +38,10 @@
 
     function example3() {
       var deferred = $q.defer();
+      console.log('example3()')
       runstrips(ops,members3,ex3Goal,ex3Start,ex3GoalState,[],1,function(result) {
+        console.log('complete with result')
+        console.log(result)
         deferred.resolve({
           moves: result.moves,
           current: ex3Start,
@@ -52,7 +55,7 @@
     var ops = blocksWorldOperations();
 
     var members1 = [
-      'A', 'B', 'C', 'D'
+    'A', 'B', 'C', 'D'
     ];
 
     var ex1Start = new Statement([
@@ -64,14 +67,14 @@
       new Predicate('clear', 'B'),
       new Predicate('clear', 'C'),
       new Predicate('clear', 'D')
-    ]);
+      ]);
     var ex1GoalState = new Statement([
       new Predicate('on', 'C', 'A'),
       new Predicate('on', 'B', 'D'),
       new Predicate('ontable', 'A'),
       new Predicate('ontable', 'D'),
       new Predicate('armempty')
-    ]);
+      ]);
 
     var ex1Goal = {
       name: 'goal',
@@ -81,7 +84,7 @@
     };
 
     var members2 = [
-      'A', 'B', 'C'
+    'A', 'B', 'C'
     ];
 
     var ex2Start = new Statement([
@@ -91,11 +94,11 @@
       new Predicate('armempty'),
       new Predicate('clear', 'B'),
       new Predicate('clear', 'C')
-    ]);
+      ]);
     var ex2GoalState = new Statement([
       new Predicate('on', 'B', 'C'),
       new Predicate('on', 'A', 'B')
-    ]);
+      ]);
 
     var ex2Goal = {
       name: 'goal',
@@ -105,7 +108,7 @@
     };
 
     var members3 = [
-      'A', 'B', 'C', 'D'
+    'A', 'B', 'C', 'D'
     ];
 
     var ex3Start = new Statement([
@@ -118,11 +121,11 @@
       new Predicate('clear', 'B'),
       new Predicate('clear', 'C'),
       new Predicate('clear', 'D')
-    ]);
+      ]);
     var ex3GoalState = new Statement([
       new Predicate('on', 'A', 'B'),
       new Predicate('on', 'C', 'D')
-    ]);
+      ]);
     var ex3Goal = {
       name: 'goal',
       p: ex3GoalState,
@@ -141,7 +144,7 @@
    * @returns {Predicate}
    * @constructor
    */
-  function Predicate(name, val1, val2) {
+   function Predicate(name, val1, val2) {
     this.name = name;
     this.x = val1 || null;
     this.y = val2 || null;
@@ -166,7 +169,7 @@
    * @param {Array} predicates - array of Predicate objects
    * @constructor
    */
-  function Statement(predicates) {
+   function Statement(predicates) {
     this.list = predicates || [];
     this.containsOne = containsOne;
     this.containsAll = containsAll;
@@ -221,7 +224,7 @@
      * unpacks a statement into an array of singleton statements
      * @returns {Array} - array of Statements, each containing one predicate
      */
-    function expand() {
+     function expand() {
       var output = [(new Statement(this.list))];
       output[0].isAnExpandedStatement = true;
       for (var i = this.list.length - 1; i >= 0; --i) {
@@ -250,14 +253,13 @@
         }
       }
     }
-
   }
 
   /**
    * A Singleton used to generate moves specific to the blocks world
    * @returns {{generateOperations: generateOperations}}
    */
-  function blocksWorldOperations() {
+   function blocksWorldOperations() {
     return {
       generateOperations: generateOperations
     };
@@ -298,7 +300,7 @@
      * @param {Array} members, a string array
      * @returns {Array}
      */
-    function generateOperations(current, members) {
+     function generateOperations(current, members) {
       var ops = [];
       for (var i = 0; i < members.length; ++i) {
         /* one-parameter operations */
@@ -342,7 +344,14 @@
    * @param {int} depth - track recursion depth
    * @returns {boolean}
    */
-  function strips(ops,members,move,current,goal,thisPlan,depth) {
+   function strips(ops,members,move,current,goal,thisPlan,depth) {
+    /* prints search tree to console */
+    var tree = "";
+    for (var i = 0; i < depth; ++i) {
+      tree += "  ";
+    }
+    tree += move.name;
+    console.log(tree);
     if (depth > 12) {
       return {
         validBranch: false,
@@ -375,67 +384,9 @@
 
         // cull possible moves
         cullPossibleMoves(possibleMoves,triedMoves);
-        // for (var j = possibleMoves.length-1; j >= 0; --j) {
-        //   var thisPossibleMoveName = possibleMoves[j].name;
-        //   for (var k = triedMoves.length-1; k >= 0; --k) {
-        //     var previousMove = triedMoves[k].name;
-        //     if (thisPossibleMoveName.indexOf(moveNameFromString(previousMove)) != -1) {
-        //       if ((thisPossibleMoveName === previousMove) && (k == triedMoves.length-1)) {
-        //         possibleMoves.splice(j, 1);
-        //         k = -1;
-        //       } else if (thisPossibleMoveName.indexOf('stack') != -1 || (thisPossibleMoveName.indexOf('unstack') != -1)) {
-        //         if (thisPossibleMoveName === previousMove) {
-        //           possibleMoves.splice(j, 1);
-        //           k = -1;
-        //         }
-        //       }
-        //     }
-        //   }
-        // }
-
 
         // evaluate better moves
-        for (var j = possibleMoves.length-1; j >= 0; --j) {
-          if (goal.containsOne(possibleMoves[j].a)) {
-            if (goal.containsAll(possibleMoves[j].a)) {
-              // best possible
-              possibleMoves[j].heuristic = 8;
-            } else {
-              // still worth noting
-              possibleMoves[j].heuristic = 4;
-            }
-          } else {
-            // hmm. this doesn't help so much
-            possibleMoves[j].heuristic = 0;
-          }
-          if (thisCurrent.containsOne(possibleMoves[j].p)) {
-            if (thisCurrent.containsAll(possibleMoves[j].p)) {
-              // best possible
-              possibleMoves[j].heuristic += 2;
-            } else {
-              // still worth noting
-              possibleMoves[j].heuristic += 1;
-            }
-          } else {
-            // hmm. this doesn't help so much
-            possibleMoves[j].heuristic += 0;
-          }
-        }
-
-        for (var j = possibleMoves.length-1; j >= 0; --j) {
-          if (possibleMoves[j].heuristic == 0) {
-            possibleMoves.splice(j,1);
-          }
-        }
-
-        // sort ascending, since we will move through array in descending order, and higher numbers are better
-        possibleMoves.sort(function moveHeuristicSort (a,b){
-          return a.heuristic - b.heuristic;
-        });
-
-        // possibleMoves.forEach(function(move,index,moves) {
-        //   console.log(move.name + ' has heuristic ' + move.heuristic);
-        // });
+        heuristic(possibleMoves,thisCurrent,goal);
 
         // try moves
         for (var j = possibleMoves.length-1; j >= 0; --j) {
@@ -461,39 +412,93 @@
   // TODO: maybe could be rewritten without being O(n^2)
   // triedMoves is idempotent through this procedure
   function cullPossibleMoves(possibleMoves,triedMoves) {
+    console.log('cullPossibleMoves()');
+    var lastTriedMove = ((triedMoves.length > 0) ? triedMoves.length - 1 : 0);
+    console.log(lastTriedMove + ' is lastTriedMove');
 
     // no matter the move, don't do it twice in a row
     for (var j = possibleMoves.length-1; j >= 0; --j) {
-      var thisPossibleMoveName = possibleMoves[j].name;
+      var possibleMoveName = possibleMoves[j].name;
       for (var k = triedMoves.length-1; k >= 0; --k) {
-        var previousMove = triedMoves[k].name;
-        if (thisPossibleMoveName.indexOf(moveNameFromString(previousMove)) != -1) {
-          if ((thisPossibleMoveName === previousMove) && (k == triedMoves.length-1)) {
+        var previousMoveName = triedMoves[k].name;
+        if (hasSubstring(possibleMoveName,moveNameFromString(previousMoveName))) {
+          if ((possibleMoveName === previousMoveName) && (k == triedMoves.length-1)) {
             possibleMoves.splice(j, 1);
             k = -1;
           }
         }
       }
     }
+    
+    //var previousMoveName = triedMoves[lastTriedMove].name;
+    //console.log(previousMoveName);
+    // possibleMoves.forEach(function(move,index,moves) {
+    //   console.log('checking ' + move.name)
+    //   if (hasSubstring(move.name,moveNameFromString(previousMoveName))) {
+    //     console.log('splicing index ' + index + ' which is move ' + move.name);
+    //     possibleMoves.splice(index,1);
+    //   }
+    // })
 
-    // if we are stacking or unstacking
+    // if we are stacking or unstacking ('stack' is a substring of 'unstack')
     // make sure we only ever use stack or unstack with
     // this exact list of parameters once in a list of triedMoves
     for (var j = possibleMoves.length-1; j >= 0; --j) {
-      var thisPossibleMoveName = possibleMoves[j].name;
+      var possibleMoveName = possibleMoves[j].name;
       for (var k = triedMoves.length-1; k >= 0; --k) {
-        var previousMove = triedMoves[k].name;
-        if (thisPossibleMoveName.indexOf('stack') != -1 || (thisPossibleMoveName.indexOf('unstack') != -1)) {
-          if (thisPossibleMoveName === previousMove) {
+        var previousMoveName = triedMoves[k].name;
+        if (possibleMoveName.indexOf('stack') != -1) {
+          if (possibleMoveName === previousMoveName) {
             possibleMoves.splice(j, 1);
             k = -1;
           }
         }
       }  
     }    
+  }
 
-    // we can only putdown what we most recently picked up
 
+  function heuristic(possibleMoves,thisCurrent,goal) {
+    for (var j = possibleMoves.length-1; j >= 0; --j) {
+      if (goal.containsOne(possibleMoves[j].a)) {
+        if (goal.containsAll(possibleMoves[j].a)) {
+          // best possible
+          possibleMoves[j].heuristic = 8;
+        } else {
+          // still worth noting
+          possibleMoves[j].heuristic = 4;
+        }
+      } else {
+        // hmm. this doesn't help so much
+        possibleMoves[j].heuristic = 0;
+      }
+      if (thisCurrent.containsOne(possibleMoves[j].p)) {
+        if (thisCurrent.containsAll(possibleMoves[j].p)) {
+          // best possible
+          possibleMoves[j].heuristic += 2;
+        } else {
+          // still worth noting
+          possibleMoves[j].heuristic += 1;
+        }
+      } else {
+        // hmm. this doesn't help so much
+        possibleMoves[j].heuristic += 0;
+      }
+    }
+    for (var j = possibleMoves.length-1; j >= 0; --j) {
+      if (possibleMoves[j].heuristic == 0) {
+        possibleMoves.splice(j,1);
+      }
+    }
+
+    // sort ascending, since we will move through array in descending order, and higher numbers are better
+    possibleMoves.sort(function moveHeuristicSort (a,b){
+      return a.heuristic - b.heuristic;
+    });
+
+    // possibleMoves.forEach(function(move,index,moves) {
+    //   console.log(move.name + ' has heuristic ' + move.heuristic);
+    // });
   }
 
   function moveNameFromString(str) {
@@ -517,6 +522,10 @@
       }
     }
     return newObj;
+  }
+
+  function hasSubstring(str1,str2) {
+    return (str1.indexOf(str2) != -1);
   }
 
   function runstrips(ops,members,move,current,goal,thisPlan,depth,callback) {
