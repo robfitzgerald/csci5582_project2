@@ -17,7 +17,7 @@
           resolve: {
             result: function (StripsFactory) {
               console.log('ex1.resolve beginning')
-              return 5;/*StripsFactory.example1();*/
+              return StripsFactory.example1();
             }
           }
         })
@@ -29,7 +29,7 @@
           resolve: {
             result: function (StripsFactory) {
               console.log('ex2.resolve beginning')
-              return 10;/*StripsFactory.example2();*/
+              return StripsFactory.example2();
             }
           }
         })
@@ -41,18 +41,14 @@
           resolve: {
             result: function (StripsFactory) {
               console.log('ex3.resolve beginning')
-              StripsFactory.example3()
+              return StripsFactory.example3()
                 .then(function (result) {
                   console.log('resolve success')
-                  console.log(result)
                   return result;
                 })
                 .catch(function (err) {
                   console.log('resolve fail')
-                  console.log(err)
-                  return {
-                    moves: err
-                  }
+                  return err;
                 });
             }
           }

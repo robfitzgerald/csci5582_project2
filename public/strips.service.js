@@ -11,6 +11,44 @@
       example3: example3   // of your choice
     };
 
+
+    function example1() {
+      var deferred = $q.defer();
+      runstrips(ops,members1,ex1Goal,ex1Start,ex1GoalState,[],1,function(result) {
+        deferred.resolve({
+          moves: result.triedMoves,
+          start: ex1Start.list,
+          goal: ex1GoalState.list
+      });
+      });
+      return deferred.promise;
+    }
+
+    function example2() {
+      var deferred = $q.defer();
+      runstrips(ops,members2,ex2Goal,ex2Start,ex2GoalState,[],1,function(result) {
+        deferred.resolve({
+          moves: result.triedMoves,
+          start: ex2Start.list,
+          goal: ex2GoalState.list
+        });
+      });
+      return deferred.promise;
+    }
+
+    function example3() {
+      var deferred = $q.defer();
+      runstrips(ops,members3,ex3Goal,ex3Start,ex3GoalState,[],1,function(result) {
+        deferred.resolve({
+          moves: result.triedMoves,
+          start: ex3Start.list,
+          goal: ex3GoalState.list
+        });
+      });
+      return deferred.promise;
+    }
+
+
     var ops = blocksWorldOperations();
 
     var members1 = [
@@ -91,39 +129,6 @@
       a: new Statement(),
       d: new Statement()
     };
-
-    function example1() {
-      var result = strips(ops,members1,ex1Goal,ex1Start,ex1GoalState,[],1);
-      return {
-        //moves: result.triedMoves,
-        //start: ex1Start.list,
-        //goal: ex1GoalState.list
-      }
-    }
-
-    function example2() {
-      var result = strips(ops,members2,ex2Goal,ex2Start,ex2GoalState,[],1);
-      return {
-        //moves: result.triedMoves,
-        //start: ex2Start.list,
-        //goal: ex2GoalState.list
-      }
-    }
-
-    function example3() {
-      console.log('example3() begin')
-      var deferred = $q.defer();
-      runstrips(ops,members3,ex3Goal,ex3Start,ex3GoalState,[],1,function(result) {
-        console.log('example3() end (resolving)')
-        $q.resolve({
-          moves: result.triedMoves,
-          start: ex3Start.list,
-          goal: ex3GoalState.list
-        });
-      });
-      
-      return deferred.promise;
-    }
 
     return StripsFactory;
   }
@@ -338,7 +343,7 @@
    * @returns {boolean}
    */
   function strips(ops,members,move,current,goal,thisPlan,depth) {
-    if (depth > 8) {
+    if (depth > 12) {
       return {
         validBranch: false,
         current: deepCopy(current),
@@ -377,9 +382,6 @@
           var thisPossibleMoveName = possibleMoves[j].name;
           for (var k = triedMoves.length-1; k >= 0; --k) {
             var previousMove = triedMoves[k].name;
-            console.log('the two things that broke:');
-            console.log(thisPossibleMoveName);
-            console.log(previousMove);
             if (thisPossibleMoveName.indexOf(moveNameFromString(previousMove)) != -1) {
               if ((thisPossibleMoveName === previousMove) && (k == triedMoves.length-1)) {
                 possibleMoves.splice(j, 1);

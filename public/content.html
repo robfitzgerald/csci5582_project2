@@ -3,7 +3,7 @@
         <div class="col s12 m3 l3">
             <ul class="collection with-header">
                 <li class="collection-header teal darken-2">Moves</li>
-                <li ng-repeat="move in ctrl.solution.moves">
+                <li ng-repeat="move in ctrl.result.moves">
                     <span>{{move.name}}</span>
                 </li>
             </ul>
@@ -12,7 +12,7 @@
         <div class="col s12 m3 l3">
             <ul class="collection with-header">
                 <li class="collection-header teal darken-2">Current</li>
-                <li ng-repeat="pred in ctrl.solution.current">
+                <li ng-repeat="pred in ctrl.result.current">
                     <span>{{pred.name}}</span>
                 </li>
             </ul>
@@ -22,7 +22,7 @@
         <div class="col s12 m3 l3">
             <ul class="collection with-header">
                 <li class="collection-header teal darken-2">Stack</li>
-                <li ng-repeat="pred in ctrl.solution.stack">
+                <li ng-repeat="pred in ctrl.result.stack">
                     <span>{{pred.name}}</span>
                 </li>
             </ul>
@@ -32,7 +32,7 @@
     </div>
     <div class="row">
         <ul class="col s2 m2 l2">
-            <li ng-repeat="box in ctrl.solution.slotA">
+            <li ng-repeat="box in ctrl.result.slotA">
                 <!--<img ng-src="/img/{{box.name}}" alt="{{box.name}}"/>-->
                 <h2 class="box">{{box.name}}</h2>
             </li>

@@ -7,6 +7,7 @@
   function StripsController(result) {
     var vm = this;
     vm.result = result;
+    console.log(result);
     vm.solution = {};
 /*    reorderResult();
 
