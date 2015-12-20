@@ -8,7 +8,10 @@
     var StripsFactory = {
       example1: example1,  // simple problem
       example2: example2,  // sussman anomoly
-      example3: example3   // of your choice
+      example3: example3,   // of your choice
+      blocksWorldOperations: blocksWorldOperations,
+      Predicate: Predicate,
+      Statement: Statement
     };
 
 
@@ -38,10 +41,10 @@
 
     function example3() {
       var deferred = $q.defer();
-      console.log('example3()')
+      //console.log('example3()')
       runstrips(ops,members3,ex3Goal,ex3Start,ex3GoalState,[],1,function(result) {
-        console.log('complete with result')
-        console.log(result)
+        //console.log('complete with result')
+        //console.log(result)
         deferred.resolve({
           moves: result.moves,
           current: ex3Start,
@@ -345,13 +348,6 @@
    * @returns {boolean}
    */
    function strips(ops,members,move,current,goal,thisPlan,depth) {
-    /* prints search tree to console */
-    var tree = "";
-    for (var i = 0; i < depth; ++i) {
-      tree += "  ";
-    }
-    tree += move.name;
-    console.log(tree);
     if (depth > 12) {
       return {
         validBranch: false,
@@ -394,6 +390,15 @@
           triedMoves.push(possibleMoves[j]);
           var recurse = strips(ops,members,possibleMoves[j],thisCurrent,goal,triedMoves,(depth+1));
           if (recurse.validBranch) {
+            /* prints search tree to console */
+            // var tree = "";
+            // // for (var i = 0; i < depth; ++i) {
+            // //   tree += " ";
+            // // }
+            // tree += thisPossibleMoveName;
+            // tree += "               | depth= " + depth + ", heuristic= " + possibleMoves[j].heuristic;
+            // tree += " triedMoves.length= " + triedMoves.length;
+            // console.log(tree);
             triedMoves = deepCopy(recurse.triedMoves);
             thisCurrent = deepCopy(recurse.current);
             thisCurrent.deleteStatement(possibleMoves[j].d);
@@ -412,9 +417,9 @@
   // TODO: maybe could be rewritten without being O(n^2)
   // triedMoves is idempotent through this procedure
   function cullPossibleMoves(possibleMoves,triedMoves) {
-    console.log('cullPossibleMoves()');
+    //console.log('cullPossibleMoves()');
     var lastTriedMove = ((triedMoves.length > 0) ? triedMoves.length - 1 : 0);
-    console.log(lastTriedMove + ' is lastTriedMove');
+    //console.log(lastTriedMove + ' is lastTriedMove');
 
     // no matter the move, don't do it twice in a row
     for (var j = possibleMoves.length-1; j >= 0; --j) {
