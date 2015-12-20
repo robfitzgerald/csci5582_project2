@@ -13,7 +13,7 @@
 				it('should respond with a tuple with expected keys', function(done) {
 					StripsFactory.example1()
 						.then(function(res) {
-							expect(res).to.have.all.keys(['moves', 'start', 'goal']);
+							expect(res).to.have.all.keys(['moves', 'current', 'goal']);
 							done();
 						})
 				})
@@ -22,7 +22,7 @@
 				it('should respond with a tuple with expected keys', function(done) {
 					StripsFactory.example2()
 						.then(function(res) {
-							expect(res).to.have.all.keys(['moves', 'start', 'goal']);
+							expect(res).to.have.all.keys(['moves', 'current', 'goal']);
 							done();
 						})
 				})
@@ -31,7 +31,7 @@
 				it('should respond with a tuple with expected keys', function(done) {
 					StripsFactory.example3()
 						.then(function(res) {
-							expect(res).to.have.all.keys(['moves', 'start', 'goal']);
+							expect(res).to.have.all.keys(['moves', 'current', 'goal']);
 							done();
 						})
 				})

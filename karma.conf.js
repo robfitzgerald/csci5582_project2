@@ -22,7 +22,7 @@ module.exports = function(config) {
       'public/*.module.js',
       'public/*.controller.js',
       'public/*.service.js',
-      'public/demonstration.service.unit.js'
+      'public/*.unit.js'
     ],
 
     client: {
