@@ -108,7 +108,61 @@
 				})
 			})
 			describe('blocksWorldOperations', function() {
+				var stackPos1, stackPos2, stackNeg;
+				var unstackPos1, unstackPos2, unstackNeg;
+				var pickupPos, pickupNeg;
+				var putdownPos1, putdownPos2, putdownNeg;
 				
+				var members;
+				before(function() {
+					stackPos1 = new StripsFactory.Statement([new StripsFactory.Predicate('armempty')])
+					stackPos2 = new StripsFactory.Statement([new StripsFactory.Predicate('on','A','B')])
+					stackNeg = new StripsFactory.Statement([new StripsFactory.Predicate('holding','A')])
+					unstackPos1 = new StripsFactory.Statement([new StripsFactory.Predicate('holding', 'A')])
+					unstackPos2 = new StripsFactory.Statement([new StripsFactory.Predicate('clear', 'A')])
+					unstackNeg = new StripsFactory.Statement([new StripsFactory.Predicate('on', 'A', 'B')])
+					pickupPos = new StripsFactory.Statement([new StripsFactory.Predicate('holding', 'A')])
+					pickupNeg = new StripsFactory.Statement([new StripsFactory.Predicate('ontable', 'A')])
+					putdownPos1 = new StripsFactory.Statement([new StripsFactory.Predicate('ontable', 'A')])
+					putdownPos2 = new StripsFactory.Statement([new StripsFactory.Predicate('armempty')])
+					putdownNeg = new StripsFactory.Statement([new StripsFactory.Predicate('on', 'A', 'B')])
+					members = ['A','B','C'];
+				})
+				describe('generateOptions()', function() {
+					it('Op_stack() positive', function() {
+						var pos1 = StripsFactory.blocksWorldOperations().generateOperations(stackPos1,members);
+						var pos2 = StripsFactory.blocksWorldOperations().generateOperations(stackPos2,members);
+						var match = [];
+						pos1.forEach(function(op,i,ops) {
+							if (StripsFactory.hasSubstring(op.name,'stack(') && !StripsFactory.hasSubstring(op.name,'un')) {
+								match.push(op);
+							}
+						})
+						pos2.forEach(function(op,i,ops) {
+							if (StripsFactory.hasSubstring(op.name,'stack(') && !StripsFactory.hasSubstring(op.name,'un')) {
+								match.push(op);
+							}
+						})						
+						expect(match.length).to.be.above(0);
+					})
+					it('Op_stack() negative', function() {
+						var neg = StripsFactory.blocksWorldOperations().generateOperations(stackNeg,members);
+						var match = [];
+						neg.forEach(function(op,i,ops) {
+							if (StripsFactory.hasSubstring(op.name,'stack(') && !StripsFactory.hasSubstring(op.name,'un')) {
+								match.push(op);
+							}
+						})
+						expect(match.length).to.equal(0);
+					})
+					it('Op_unstack() positive')
+					it('Op_unstack() negative')
+					it('Op_pickup() positive')
+					it('Op_pickup() negative')
+					it('Op_putdown() positive')
+					it('Op_putdown() negative')
+					it('should output nothing given an empty current state')
+				})
 			})
 
 			describe.skip('example 1', function() {

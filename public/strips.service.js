@@ -11,7 +11,9 @@
       example3: example3,   // of your choice
       blocksWorldOperations: blocksWorldOperations,
       Predicate: Predicate,
-      Statement: Statement
+      Statement: Statement,
+      moveNameFromString: moveNameFromString,
+      hasSubstring: hasSubstring
     };
 
 
