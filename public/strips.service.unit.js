@@ -10,7 +10,7 @@
 	describe('strips.service.js', function() {
 
 		describe('StripsFactory', function() {
-			describe('Predicate', function() {
+			describe('Predicate @constructor', function() {
 				it('should store all parameters passed to it', function() {
 					var t1 = new StripsFactory.Predicate('name', 'x', 'y');
 					expect(t1.name).to.equal('name')
@@ -32,7 +32,7 @@
 					expect(t3.toString()).to.equal('a(b,c)');
 				})
 			})
-			describe('Statement', function() {
+			describe('Statement @constructor', function() {
 				var p1,p2,p3,p4,s1;
 				var containsOnePos,containsOneNeg,containsAllPos,containsAllNeg;
 				var addPos, addNeg, deletePos, deleteNeg;
@@ -107,11 +107,12 @@
 					expect(s1.list[2]).to.equal(p3);
 				})
 			})
-			describe('blocksWorldOperations', function() {
+			describe('blocksWorldOperations()', function() {
 				var stackPos1, stackPos2, stackNeg;
 				var unstackPos1, unstackPos2, unstackNeg;
 				var pickupPos, pickupNeg;
 				var putdownPos1, putdownPos2, putdownNeg;
+				var empty;
 				
 				var members;
 				before(function() {
@@ -126,6 +127,7 @@
 					putdownPos1 = new StripsFactory.Statement([new StripsFactory.Predicate('ontable', 'A')])
 					putdownPos2 = new StripsFactory.Statement([new StripsFactory.Predicate('armempty')])
 					putdownNeg = new StripsFactory.Statement([new StripsFactory.Predicate('on', 'A', 'B')])
+					empty = new StripsFactory.Statement([]);
 					members = ['A','B','C'];
 				})
 				describe('generateOptions()', function() {
@@ -139,7 +141,7 @@
 							}
 						})
 						pos2.forEach(function(op,i,ops) {
-							if (StripsFactory.hasSubstring(op.name,'stack(') && !StripsFactory.hasSubstring(op.name,'un')) {
+							if (StripsFactory.hasSubstring(op.name,'stack') && !StripsFactory.hasSubstring(op.name,'un')) {
 								match.push(op);
 							}
 						})						
@@ -149,23 +151,165 @@
 						var neg = StripsFactory.blocksWorldOperations().generateOperations(stackNeg,members);
 						var match = [];
 						neg.forEach(function(op,i,ops) {
-							if (StripsFactory.hasSubstring(op.name,'stack(') && !StripsFactory.hasSubstring(op.name,'un')) {
+							if (StripsFactory.hasSubstring(op.name,'stack') && !StripsFactory.hasSubstring(op.name,'un')) {
 								match.push(op);
 							}
 						})
 						expect(match.length).to.equal(0);
 					})
-					it('Op_unstack() positive')
-					it('Op_unstack() negative')
-					it('Op_pickup() positive')
-					it('Op_pickup() negative')
-					it('Op_putdown() positive')
-					it('Op_putdown() negative')
-					it('should output nothing given an empty current state')
+					it('Op_unstack() positive', function() {
+						var pos1 = StripsFactory.blocksWorldOperations().generateOperations(unstackPos1,members);
+						var pos2 = StripsFactory.blocksWorldOperations().generateOperations(unstackPos2,members);
+						var match = [];
+						pos1.forEach(function(op,i,ops) {
+							if (StripsFactory.hasSubstring(op.name,'unstack')) {
+								match.push(op);
+							}
+						})
+						pos2.forEach(function(op,i,ops) {
+							if (StripsFactory.hasSubstring(op.name,'unstack')) {
+								match.push(op);
+							}
+						})	
+						expect(match.length).to.be.above(0);
+					})
+					it('Op_unstack() negative', function() {
+						var neg = StripsFactory.blocksWorldOperations().generateOperations(unstackNeg,members);
+						var match = [];
+						neg.forEach(function(op,i,ops) {
+							if (StripsFactory.hasSubstring(op.name,'unstack')) {
+								match.push(op);
+							}
+						})
+						expect(match.length).to.equal(0);						
+					})
+					it('Op_pickup() positive', function() {
+						var pos = StripsFactory.blocksWorldOperations().generateOperations(pickupPos,members);
+						var match = [];
+						pos.forEach(function(op,i,ops) {
+								if (StripsFactory.hasSubstring(op.name,'pickup')) {
+									match.push(op);
+								}
+							})
+						expect(match.length).to.be.above(0);
+					})
+					it('Op_pickup() negative', function() {
+						var neg = StripsFactory.blocksWorldOperations().generateOperations(pickupNeg,members);
+						var match = [];
+						neg.forEach(function(op,i,ops) {
+							if (StripsFactory.hasSubstring(op.name,'pickup')) {
+								match.push(op);
+							}
+						})
+						expect(match.length).to.equal(0);							
+					})
+					it('Op_putdown() positive', function() {
+						var pos1 = StripsFactory.blocksWorldOperations().generateOperations(putdownPos1,members);
+						var pos2 = StripsFactory.blocksWorldOperations().generateOperations(putdownPos2,members);
+						var match = [];
+						pos1.forEach(function(op,i,ops) {
+							if (StripsFactory.hasSubstring(op.name,'putdown')) {
+								match.push(op);
+							}
+						})
+						pos2.forEach(function(op,i,ops) {
+							if (StripsFactory.hasSubstring(op.name,'putdown')) {
+								match.push(op);
+							}
+						})	
+						expect(match.length).to.be.above(0);
+
+					})
+					it('Op_putdown() negative', function() {
+						var neg = StripsFactory.blocksWorldOperations().generateOperations(putdownNeg,members);
+						var match = [];
+						neg.forEach(function(op,i,ops) {
+							if (StripsFactory.hasSubstring(op.name,'putdown')) {
+								match.push(op);
+							}
+						})
+						expect(match.length).to.equal(0);													
+					})
+					it('should output an empty array, given an empty current state', function() {
+						var neg = StripsFactory.blocksWorldOperations().generateOperations(empty,members);
+						expect(neg.length).to.equal(0);
+					})
 				})
 			})
-
-			describe.skip('example 1', function() {
+			describe('cullPossibleMoves()', function() {
+				var current, moves;
+				var members = ['A','B','C'];
+				var stack, unstack, pickup, putdown;
+				var numMoves;
+				beforeEach(function() {
+					current = new StripsFactory.Statement(
+						[
+							new StripsFactory.Predicate('on','A','B'), 
+							new StripsFactory.Predicate('armempty'),
+							new StripsFactory.Predicate('clear','A'),
+							new StripsFactory.Predicate('holding', 'C')
+						])
+					var ops = StripsFactory.blocksWorldOperations();
+					moves = ops.generateOperations(current,members);
+					numMoves = moves.length;
+					stack = new ops.Op_stack('A','B');
+					unstack = new ops.Op_unstack('A','B');
+					pickup = new ops.Op_pickup('A');
+					putdown = new ops.Op_putdown('A');
+				})
+				it('should not cull when there are no previously tried moves', function() {
+					StripsFactory.cullPossibleMoves(moves,[]);
+					expect(moves.length).to.equal(numMoves);
+				})
+				it('should not allow for repeats of stack', function() {
+					StripsFactory.cullPossibleMoves(moves,[stack]);
+					var found = false;
+					moves.forEach(function(move,i,moves) {
+						if (move.name === stack.name) {
+							found = true;
+						}
+					})
+					expect(found).to.be.false;
+					expect(numMoves).to.be.above(moves.length);
+				})
+				it('should not allow for repeats of unstack', function() {
+					StripsFactory.cullPossibleMoves(moves,[unstack]);
+					var found = false;
+					moves.forEach(function(move,i,moves) {
+						if (move.name === unstack.name) {
+							found = true;
+						}
+					})
+					expect(found).to.be.false;
+					expect(numMoves).to.be.above(moves.length);
+				})		
+				it('should not allow for repeats of pickup', function() {
+					StripsFactory.cullPossibleMoves(moves,[pickup]);
+					var found = false;
+					moves.forEach(function(move,i,moves) {
+						if (move.name === pickup.name) {
+							found = true;
+						}
+					})
+					expect(found).to.be.false;
+					expect(numMoves).to.be.above(moves.length);
+				})
+				it('should not allow for repeats of putdown', function() {
+					StripsFactory.cullPossibleMoves(moves,[putdown]);
+					var found = false;
+					moves.forEach(function(move,i,moves) {
+						if (move.name === putdown.name) {
+							found = true;
+						}
+					})
+					expect(found).to.be.false;
+					expect(numMoves).to.be.above(moves.length);
+				})				
+			})
+			describe('heuristic()', function() {
+				
+			})
+			describe.skip('example1()', function() {
 				it('should respond with a tuple with expected keys', function(done) {
 					StripsFactory.example1()
 						.then(function(res) {
@@ -174,7 +318,7 @@
 						})
 				})
 			})
-			describe.skip('example 2', function() {
+			describe.skip('example2()', function() {
 				it('should respond with a tuple with expected keys', function(done) {
 					StripsFactory.example2()
 						.then(function(res) {
@@ -183,7 +327,7 @@
 						})
 				})
 			})
-			describe.skip('example 3', function() {
+			describe.skip('example3()', function() {
 				it('should respond with a tuple with expected keys', function(done) {
 					StripsFactory.example3()
 						.then(function(res) {
@@ -194,5 +338,4 @@
 			})
 		})
 	})
-
 })();

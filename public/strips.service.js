@@ -13,7 +13,8 @@
       Predicate: Predicate,
       Statement: Statement,
       moveNameFromString: moveNameFromString,
-      hasSubstring: hasSubstring
+      hasSubstring: hasSubstring,
+      cullPossibleMoves: cullPossibleMoves
     };
 
 
@@ -64,14 +65,14 @@
     ];
 
     var ex1Start = new Statement([
-      new Predicate('on', 'B', 'A'),
+      new Predicate('clear', 'B'),
+      new Predicate('clear', 'C'),
+      new Predicate('clear', 'D'),
       new Predicate('ontable', 'A'),
       new Predicate('ontable', 'C'),
       new Predicate('ontable', 'D'),
       new Predicate('armempty'),
-      new Predicate('clear', 'B'),
-      new Predicate('clear', 'C'),
-      new Predicate('clear', 'D')
+      new Predicate('on', 'B', 'A')
       ]);
     var ex1GoalState = new Statement([
       new Predicate('on', 'C', 'A'),
@@ -266,7 +267,11 @@
    */
    function blocksWorldOperations() {
     return {
-      generateOperations: generateOperations
+      generateOperations: generateOperations,
+      Op_stack: Op_stack,
+      Op_unstack: Op_unstack,
+      Op_pickup: Op_pickup,
+      Op_putdown: Op_putdown
     };
 
 
@@ -350,7 +355,7 @@
    * @returns {boolean}
    */
    function strips(ops,members,move,current,goal,thisPlan,depth) {
-    if (depth > 12) {
+    if (depth > 20) {
       return {
         validBranch: false,
         current: deepCopy(current),
