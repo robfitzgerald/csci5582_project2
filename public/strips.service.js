@@ -233,7 +233,7 @@
      function expand() {
       var output = [(new Statement(this.list))];
       output[0].isAnExpandedStatement = true;
-      for (var i = this.list.length - 1; i >= 0; --i) {
+      for (var i = 0; i < this.list.length; ++i) {
         output.push(new Statement([this.list[i]]));
       }
       return output;
@@ -339,10 +339,14 @@
           }
         }
       }
+      ops.forEach(function(op) {
+        op.current = deepCopy(current);
+      })
       return ops;
     }
   }
 
+  // REVISED 12/22/2015
   /**
    * recursive planning operation
    * @param {function} ops - a function with a member function, generateOptions, which takes a stack and a language as its parameters
@@ -354,62 +358,63 @@
    * @param {int} depth - track recursion depth
    * @returns {boolean}
    */
-   function strips(ops,members,move,current,goal,thisPlan,depth) {
-    if (depth > 20) {
-      return {
-        validBranch: false,
-        current: deepCopy(current),
-        triedMoves: deepCopy(thisPlan)
-      }
-    }
+   function strips(ops,members,move,current,goal,triedMoves,depth) {
+    console.log('strips() at depth ' + depth + ' with move ' + move.name)
     var stack = move.p.expand();
-    var thisCurrent = deepCopy(current);
-    var triedMoves = deepCopy(thisPlan);
     for (var i = stack.length-1; i >= 0; --i) {
+      // FINAL STEP: if all of the preconditions for a move are present in the current state, then apply move
+      // else, this was not a valid branch.
       if (i == 0) {
-        if (thisCurrent.containsAll(stack[i])) {
+        if (current.containsAll(stack[i])) {
+          // we don't modify the goal state at depth 1
+          if (depth != 1) {
+            current.deleteStatement(move.d);
+            current.addStatement(move.a);
+          }
           return {
             validBranch: true,
-            current: deepCopy(thisCurrent),
+            current: deepCopy(current),
             triedMoves: deepCopy(triedMoves)
           }
         } else {
           return {
             validBranch: false,
-            current: deepCopy(current),
-            triedMoves: deepCopy(thisPlan)
+            // current: deepCopy(current),
+            // triedMoves: deepCopy(triedMoves)
           }
         }
-      } else if ((i == stack.length - 1) && thisCurrent.containsAll(stack[i])) {
+        // EASY STEP: this precondition is a match, so, pop it.
+      } else if ((i == stack.length - 1) && current.containsAll(stack[i])) {
         stack.pop();
+        // HARD STEP: this precondition isn't a match, so, generate possible moves and recurse.
       }  else {
         var possibleMoves = ops.generateOperations(stack[i],members);
-
-        // cull possible moves
         cullPossibleMoves(possibleMoves,triedMoves);
-
-        // evaluate better moves
-        heuristic(possibleMoves,thisCurrent,goal);
-
-        // try moves
+        heuristic(possibleMoves,current,goal);
         for (var j = possibleMoves.length-1; j >= 0; --j) {
-          var thisPossibleMoveName = possibleMoves[j].name;
-          triedMoves.push(possibleMoves[j]);
-          var recurse = strips(ops,members,possibleMoves[j],thisCurrent,goal,triedMoves,(depth+1));
+          var recurseMove = deepCopy(possibleMoves[j]);
+          var recurseCurrent = deepCopy(current);
+          var recurseTriedMoves = deepCopy(triedMoves);
+          triedMoves.push(recurseMove);
+          console.log('trying ' + recurseMove.name);
+          var recurse = strips(ops,members,recurseMove,recurseCurrent,goal,recurseTriedMoves,(depth+1));
           if (recurse.validBranch) {
             /* prints search tree to console */
-            // var tree = "";
-            // // for (var i = 0; i < depth; ++i) {
-            // //   tree += " ";
-            // // }
-            // tree += thisPossibleMoveName;
-            // tree += "               | depth= " + depth + ", heuristic= " + possibleMoves[j].heuristic;
-            // tree += " triedMoves.length= " + triedMoves.length;
-            // console.log(tree);
+            var tree = "";
+            // for (var i = 0; i < depth; ++i) {
+            //   tree += " ";
+            // }
+            tree += recurseMove.name;
+            tree += "               | depth= " + depth + ", heuristic= " + recurseMove.heuristic;
+            tree += " triedMoves.length= " + triedMoves.length;
+            console.log(tree);
             triedMoves = deepCopy(recurse.triedMoves);
-            thisCurrent = deepCopy(recurse.current);
-            thisCurrent.deleteStatement(possibleMoves[j].d);
-            thisCurrent.addStatement(possibleMoves[j].a);
+            current = deepCopy(recurse.current);
+            if (depth == 1) {
+              console.log('added new moves to goal-level, and updated current')
+              console.log(deepCopy(triedMoves));
+              console.log(deepCopy(current));
+            }
             stack.pop();
             j = -1; // we're done applying moves to the predicate we just deleted, bro
           } else {
@@ -420,6 +425,84 @@
       }
     }
   }
+
+  // /**
+  //  * recursive planning operation
+  //  * @param {function} ops - a function with a member function, generateOptions, which takes a stack and a language as its parameters
+  //  * @param {Array} members - the language of this problem
+  //  * @param move - the operation, of the form of a member of ops, which will begin this subproblem
+  //  * @param current - the current state
+  //  * @param goal - the goal state, which doesn't get mutated
+  //  * @param {Array} thisPlan -
+  //  * @param {int} depth - track recursion depth
+  //  * @returns {boolean}
+  //  */
+  //  function strips(ops,members,move,current,goal,thisPlan,depth) {
+  //   // if (depth > 20) {
+  //   //   return {
+  //   //     validBranch: false,
+  //   //     current: deepCopy(current),
+  //   //     triedMoves: deepCopy(thisPlan)
+  //   //   }
+  //   // }
+  //   var stack = move.p.expand();
+  //   var thisCurrent = deepCopy(current);
+  //   var triedMoves = deepCopy(thisPlan);
+  //   for (var i = stack.length-1; i >= 0; --i) {
+  //     if (i == 0) {
+  //       if (thisCurrent.containsAll(stack[i])) {
+  //         return {
+  //           validBranch: true,
+  //           current: deepCopy(thisCurrent),
+  //           triedMoves: deepCopy(triedMoves)
+  //         }
+  //       } else {
+  //         return {
+  //           validBranch: false,
+  //           current: deepCopy(current),
+  //           triedMoves: deepCopy(thisPlan)
+  //         }
+  //       }
+  //     } else if ((i == stack.length - 1) && thisCurrent.containsAll(stack[i])) {
+  //       stack.pop();
+  //     }  else {
+  //       var possibleMoves = ops.generateOperations(stack[i],members);
+
+  //       // cull possible moves
+  //       cullPossibleMoves(possibleMoves,triedMoves);
+
+  //       // evaluate better moves
+  //       heuristic(possibleMoves,thisCurrent,goal);
+
+  //       // try moves
+  //       for (var j = possibleMoves.length-1; j >= 0; --j) {
+  //         var thisPossibleMoveName = possibleMoves[j].name;
+  //         triedMoves.push(possibleMoves[j]);
+  //         var recurse = strips(ops,members,possibleMoves[j],thisCurrent,goal,triedMoves,(depth+1));
+  //         if (recurse.validBranch) {
+  //           /* prints search tree to console */
+  //           var tree = "";
+  //           // for (var i = 0; i < depth; ++i) {
+  //           //   tree += " ";
+  //           // }
+  //           tree += thisPossibleMoveName;
+  //           tree += "               | depth= " + depth + ", heuristic= " + possibleMoves[j].heuristic;
+  //           tree += " triedMoves.length= " + triedMoves.length;
+  //           console.log(tree);
+  //           triedMoves = deepCopy(recurse.triedMoves);
+  //           thisCurrent = deepCopy(recurse.current);
+  //           thisCurrent.deleteStatement(possibleMoves[j].d);
+  //           thisCurrent.addStatement(possibleMoves[j].a);
+  //           stack.pop();
+  //           j = -1; // we're done applying moves to the predicate we just deleted, bro
+  //         } else {
+  //           // nope. bad move. remove it. try another move.
+  //           triedMoves.pop();
+  //         }
+  //       }
+  //     }
+  //   }
+  // }
 
   // TODO: maybe could be rewritten without being O(n^2)
   // triedMoves is idempotent through this procedure
@@ -541,12 +624,17 @@
   }
 
   function runstrips(ops,members,move,current,goal,thisPlan,depth,callback) {
+    console.log('solving the blocks world problem with this pair of start and goal states')
+    console.log(deepCopy(current))
+    console.log(deepCopy(goal))
     var result = strips(ops,members,move,current,goal,thisPlan,depth);
     result.moves = [];
     for (var i = result.triedMoves.length - 1; i >= 0; --i) {
       result.moves.push(result.triedMoves[i]);
     }
     delete result.triedMoves;
+    console.log('DONE. calling callback with this result object')
+    console.log(deepCopy(result));
     callback(result);
   }
 
