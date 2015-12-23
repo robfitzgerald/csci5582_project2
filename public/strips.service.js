@@ -65,21 +65,23 @@
     ];
 
     var ex1Start = new Statement([
+      new Predicate('armempty'),
       new Predicate('clear', 'B'),
       new Predicate('clear', 'C'),
       new Predicate('clear', 'D'),
       new Predicate('ontable', 'A'),
-      new Predicate('ontable', 'C'),
       new Predicate('ontable', 'D'),
-      new Predicate('armempty'),
+      new Predicate('ontable', 'C'),
       new Predicate('on', 'B', 'A')
       ]);
     var ex1GoalState = new Statement([
-      new Predicate('on', 'C', 'A'),
-      new Predicate('on', 'B', 'D'),
       new Predicate('ontable', 'A'),
       new Predicate('ontable', 'D'),
-      new Predicate('armempty')
+      new Predicate('armempty'),
+      new Predicate('on', 'C', 'A'),
+      new Predicate('clear', 'C'),
+      new Predicate('clear', 'B'),
+      new Predicate('on', 'B', 'D')
       ]);
 
     var ex1Goal = {
@@ -280,6 +282,7 @@
       this.p = new Statement([new Predicate('clear', y), new Predicate('holding', x)]);
       this.d = new Statement([new Predicate('clear', y), new Predicate('holding', x)]);
       this.a = new Statement([new Predicate('armempty'), new Predicate('on', x, y)]);
+      this.oppositeName = 'unstack(' + x + ',' + y + ')';
     }
 
     function Op_unstack(x, y) {
@@ -287,6 +290,7 @@
       this.p = new Statement([new Predicate('on', x, y), new Predicate('clear', x), new Predicate('armempty')]);
       this.d = new Statement([new Predicate('on', x, y), new Predicate('armempty')]);
       this.a = new Statement([new Predicate('holding', x), new Predicate('clear', y)]);
+      this.oppositeName = 'stack(' + x + ',' + y + ')';
     }
 
     function Op_pickup(x) {
@@ -294,6 +298,7 @@
       this.p = new Statement([new Predicate('clear', x), new Predicate('ontable', x), new Predicate('armempty')]);
       this.d = new Statement([new Predicate('ontable', x), new Predicate('armempty')]);
       this.a = new Statement([new Predicate('holding', x)]);
+      this.oppositeName = 'putdown(' + x + ')';
     }
 
     function Op_putdown(x) {
@@ -301,47 +306,61 @@
       this.p = new Statement([new Predicate('holding', x)]);
       this.d = new Statement([new Predicate('holding', x)]);
       this.a = new Statement([new Predicate('ontable', x), new Predicate('armempty')]);
+      this.oppositeName = 'pickup(' + x + ')';
     }
 
 
     /**
      *
-     * @param {Statement} current
+     * @param {Statement} currentSingle The Predicate we are trying to affect
+     * @param {Statement} currentState The currentState state
      * @param {Array} members, a string array
      * @returns {Array}
      */
-     function generateOperations(current, members) {
+     function generateOperations(currentSingle, currentState, members, depth) {
       var ops = [];
       for (var i = 0; i < members.length; ++i) {
+        //console.log('i is ' + i + ' and members[i] is ' + members[i])
         /* one-parameter operations */
         var pickup = new Op_pickup(members[i]);
-        if (current.containsOne(pickup.a)) {
+        //console.log('new Op_pickup(), currentSingle, currentState')
+        //console.log(pickup)
+        //console.log(currentSingle)
+        //console.log(currentState)
+
+        //console.log('(currentSingle.containsOne(pickup.a) && currentState.containsAll(pickup.p)): ' + (currentSingle.containsOne(pickup.a) && currentState.containsAll(pickup.p)))
+
+        if (currentSingle.containsOne(pickup.a)/* && currentState.containsAll(pickup.p)*/) {
           ops.push(pickup);
         }
         var putdown = new Op_putdown(members[i]);
-        if (current.containsOne(putdown.a)) {
+        if (currentSingle.containsOne(putdown.a)/* && currentState.containsAll(putdown.p)*/) {
           ops.push(putdown);
         }
 
         for (var j = 0; j < members.length; j++) {
+          //console.log('j is ' + i + ' and members[i] is ' + members[i])
           if (i == j) {
             // do nothing
           } else {
             /* two-parameter operations */
             var stack = new Op_stack(members[i], members[j]);
-            if (current.containsOne(stack.a)) {
+            if (currentSingle.containsOne(stack.a)/* && currentState.containsAll(stack.p)*/) {
               ops.push(stack);
             }
             var unstack = new Op_unstack(members[i], members[j]);
-            if (current.containsOne(unstack.a)) {
+            if (currentSingle.containsOne(unstack.a)/* && currentState.containsAll(unstack.p)*/) {
               ops.push(unstack);
             }
           }
         }
       }
       ops.forEach(function(op) {
-        op.current = deepCopy(current);
+        op.currentState = currentState.toString();
+        op.depth = depth;
       })
+      console.log('generatedOperations:')
+      console.log(ops);
       return ops;
     }
   }
@@ -359,13 +378,22 @@
    * @returns {boolean}
    */
    function strips(ops,members,move,current,goal,triedMoves,depth) {
-    console.log('strips() at depth ' + depth + ' with move ' + move.name)
+    var newStripsLog = "";
+    for (var i = 0; i < depth; ++i) {
+      newStripsLog += "~";
+    }
+    newStripsLog += 'strips() at depth ' + depth + ' with move ' + move.name;
+    console.log(newStripsLog);
     var stack = move.p.expand();
     for (var i = stack.length-1; i >= 0; --i) {
       // FINAL STEP: if all of the preconditions for a move are present in the current state, then apply move
       // else, this was not a valid branch.
       if (i == 0) {
-        if (current.containsAll(stack[i])) {
+        // console.log('i = ' + i + ' and depth = ' + depth);
+        // console.log(deepCopy(current))
+        // console.log(deepCopy(goal))
+        // console.log('current.containsAll(goal) = ' + current.containsAll(goal))
+        if (current.containsAll(stack[i]) || current.containsAll(goal)) {
           // we don't modify the goal state at depth 1
           if (depth != 1) {
             current.deleteStatement(move.d);
@@ -388,15 +416,22 @@
         stack.pop();
         // HARD STEP: this precondition isn't a match, so, generate possible moves and recurse.
       }  else {
-        var possibleMoves = ops.generateOperations(stack[i],members);
+        // console.log('about to call ops.generateOperations() from within strips()')
+        // console.log(stack[i])
+        // console.log(current)
+        var possibleMoves = ops.generateOperations(stack[i], current, members, depth);
         cullPossibleMoves(possibleMoves,triedMoves);
         heuristic(possibleMoves,current,goal);
         for (var j = possibleMoves.length-1; j >= 0; --j) {
           var recurseMove = deepCopy(possibleMoves[j]);
           var recurseCurrent = deepCopy(current);
-          var recurseTriedMoves = deepCopy(triedMoves);
+          var 
+          for (var i = 0; i < triedMoves.length; ++i) {
+
+          }
           triedMoves.push(recurseMove);
-          console.log('trying ' + recurseMove.name);
+          var recurseTriedMoves = deepCopy(triedMoves);
+          //console.log('trying ' + recurseMove.name);
           var recurse = strips(ops,members,recurseMove,recurseCurrent,goal,recurseTriedMoves,(depth+1));
           if (recurse.validBranch) {
             /* prints search tree to console */
@@ -409,12 +444,16 @@
             tree += " triedMoves.length= " + triedMoves.length;
             console.log(tree);
             triedMoves = deepCopy(recurse.triedMoves);
+            console.log(current.toString())
+            console.log(recurse.current.toString())
             current = deepCopy(recurse.current);
-            if (depth == 1) {
-              console.log('added new moves to goal-level, and updated current')
-              console.log(deepCopy(triedMoves));
-              console.log(deepCopy(current));
-            }
+            // if (depth == 1) {
+            //   console.log('added new moves to goal-level, and updated current')
+            //   console.log(deepCopy(triedMoves));
+            //   console.log(deepCopy(current));
+            //   console.log('i = ' + i);
+            //   //i = 1; // run for loop one more time so we catch the final return.
+            // }
             stack.pop();
             j = -1; // we're done applying moves to the predicate we just deleted, bro
           } else {
@@ -426,92 +465,16 @@
     }
   }
 
-  // /**
-  //  * recursive planning operation
-  //  * @param {function} ops - a function with a member function, generateOptions, which takes a stack and a language as its parameters
-  //  * @param {Array} members - the language of this problem
-  //  * @param move - the operation, of the form of a member of ops, which will begin this subproblem
-  //  * @param current - the current state
-  //  * @param goal - the goal state, which doesn't get mutated
-  //  * @param {Array} thisPlan -
-  //  * @param {int} depth - track recursion depth
-  //  * @returns {boolean}
-  //  */
-  //  function strips(ops,members,move,current,goal,thisPlan,depth) {
-  //   // if (depth > 20) {
-  //   //   return {
-  //   //     validBranch: false,
-  //   //     current: deepCopy(current),
-  //   //     triedMoves: deepCopy(thisPlan)
-  //   //   }
-  //   // }
-  //   var stack = move.p.expand();
-  //   var thisCurrent = deepCopy(current);
-  //   var triedMoves = deepCopy(thisPlan);
-  //   for (var i = stack.length-1; i >= 0; --i) {
-  //     if (i == 0) {
-  //       if (thisCurrent.containsAll(stack[i])) {
-  //         return {
-  //           validBranch: true,
-  //           current: deepCopy(thisCurrent),
-  //           triedMoves: deepCopy(triedMoves)
-  //         }
-  //       } else {
-  //         return {
-  //           validBranch: false,
-  //           current: deepCopy(current),
-  //           triedMoves: deepCopy(thisPlan)
-  //         }
-  //       }
-  //     } else if ((i == stack.length - 1) && thisCurrent.containsAll(stack[i])) {
-  //       stack.pop();
-  //     }  else {
-  //       var possibleMoves = ops.generateOperations(stack[i],members);
-
-  //       // cull possible moves
-  //       cullPossibleMoves(possibleMoves,triedMoves);
-
-  //       // evaluate better moves
-  //       heuristic(possibleMoves,thisCurrent,goal);
-
-  //       // try moves
-  //       for (var j = possibleMoves.length-1; j >= 0; --j) {
-  //         var thisPossibleMoveName = possibleMoves[j].name;
-  //         triedMoves.push(possibleMoves[j]);
-  //         var recurse = strips(ops,members,possibleMoves[j],thisCurrent,goal,triedMoves,(depth+1));
-  //         if (recurse.validBranch) {
-  //           /* prints search tree to console */
-  //           var tree = "";
-  //           // for (var i = 0; i < depth; ++i) {
-  //           //   tree += " ";
-  //           // }
-  //           tree += thisPossibleMoveName;
-  //           tree += "               | depth= " + depth + ", heuristic= " + possibleMoves[j].heuristic;
-  //           tree += " triedMoves.length= " + triedMoves.length;
-  //           console.log(tree);
-  //           triedMoves = deepCopy(recurse.triedMoves);
-  //           thisCurrent = deepCopy(recurse.current);
-  //           thisCurrent.deleteStatement(possibleMoves[j].d);
-  //           thisCurrent.addStatement(possibleMoves[j].a);
-  //           stack.pop();
-  //           j = -1; // we're done applying moves to the predicate we just deleted, bro
-  //         } else {
-  //           // nope. bad move. remove it. try another move.
-  //           triedMoves.pop();
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
 
   // TODO: maybe could be rewritten without being O(n^2)
-  // triedMoves is idempotent through this procedure
+  // triedMoves is idempotent through this procedure, but since possibleMoves.length is not,
+  // each operation occurs inside its own nested loop structure
   function cullPossibleMoves(possibleMoves,triedMoves) {
     //console.log('cullPossibleMoves()');
     var lastTriedMove = ((triedMoves.length > 0) ? triedMoves.length - 1 : 0);
-    //console.log(lastTriedMove + ' is lastTriedMove');
+    console.log('cullPossibleMoves(): lastTriedMove' + ' is ' + lastTriedMove);
 
-    // no matter the move, don't do it twice in a row
+    //no matter the move, don t do it twice in a row
     for (var j = possibleMoves.length-1; j >= 0; --j) {
       var possibleMoveName = possibleMoves[j].name;
       for (var k = triedMoves.length-1; k >= 0; --k) {
@@ -525,8 +488,8 @@
       }
     }
     
-    //var previousMoveName = triedMoves[lastTriedMove].name;
-    //console.log(previousMoveName);
+    // var previousMoveName = triedMoves[lastTriedMove].name;
+    // console.log(previousMoveName);
     // possibleMoves.forEach(function(move,index,moves) {
     //   console.log('checking ' + move.name)
     //   if (hasSubstring(move.name,moveNameFromString(previousMoveName))) {
@@ -535,21 +498,33 @@
     //   }
     // })
 
-    // if we are stacking or unstacking ('stack' is a substring of 'unstack')
+    // 1. if we are stacking or unstacking ('stack' is a substring of 'unstack')
     // make sure we only ever use stack or unstack with
     // this exact list of parameters once in a list of triedMoves
-    for (var j = possibleMoves.length-1; j >= 0; --j) {
-      var possibleMoveName = possibleMoves[j].name;
-      for (var k = triedMoves.length-1; k >= 0; --k) {
-        var previousMoveName = triedMoves[k].name;
-        if (possibleMoveName.indexOf('stack') != -1) {
-          if (possibleMoveName === previousMoveName) {
-            possibleMoves.splice(j, 1);
-            k = -1;
-          }
-        }
-      }  
-    }    
+    // for (var j = possibleMoves.length-1; j >= 0; --j) {
+    //   var possibleMoveName = possibleMoves[j].name;
+    //   for (var k = triedMoves.length-1; k >= 0; --k) {
+    //     var previousMoveName = triedMoves[k].name;
+    //     if (possibleMoveName.indexOf('stack') != -1) {
+    //       if (possibleMoveName === previousMoveName) {
+    //         possibleMoves.splice(j, 1);
+    //         k = -1;
+    //       }
+    //     }
+    //   }  
+    // }
+
+    // 2. recognize opposites and remove them. 
+    if (lastTriedMove > 0) {
+      for (var j = possibleMoves.length-1; j >= 0; --j) {
+        var possibleMoveName = possibleMoves[j].name;
+        var oppositeOfPreviousMove = triedMoves[lastTriedMove].oppositeName;
+        if (possibleMoveName === oppositeOfPreviousMove) {
+          console.log('removing opposites where possible = ' + possibleMoveName + ' and opposite of previous = ' + oppositeOfPreviousMove)
+          possibleMoves.splice(j, 1);
+        } 
+      }
+    }
   }
 
 
@@ -580,11 +555,11 @@
         possibleMoves[j].heuristic += 0;
       }
     }
-    for (var j = possibleMoves.length-1; j >= 0; --j) {
-      if (possibleMoves[j].heuristic == 0) {
-        possibleMoves.splice(j,1);
-      }
-    }
+    // for (var j = possibleMoves.length-1; j >= 0; --j) {
+    //   if (possibleMoves[j].heuristic == 0) {
+    //     possibleMoves.splice(j,1);
+    //   }
+    // }
 
     // sort ascending, since we will move through array in descending order, and higher numbers are better
     possibleMoves.sort(function moveHeuristicSort (a,b){
@@ -594,48 +569,48 @@
     // possibleMoves.forEach(function(move,index,moves) {
     //   console.log(move.name + ' has heuristic ' + move.heuristic);
     // });
-  }
+}
 
-  function moveNameFromString(str) {
-    var output = "";
-    for (var i = 0; i < str.length; ++i) {
-      if (str.charAt(i) == '(') {
-        return output;
-      } else {
-        output += str.charAt(i);
-      }
+function moveNameFromString(str) {
+  var output = "";
+  for (var i = 0; i < str.length; ++i) {
+    if (str.charAt(i) == '(') {
+      return output;
+    } else {
+      output += str.charAt(i);
     }
-    return output;
   }
+  return output;
+}
 
-  function deepCopy(oldObj) {
-    var newObj = oldObj;
-    if (oldObj && typeof oldObj === 'object') {
-      newObj = Object.prototype.toString.call(oldObj) === "[object Array]" ? [] : {};
-      for (var i in oldObj) {
-        newObj[i] = deepCopy(oldObj[i]);
-      }
+function deepCopy(oldObj) {
+  var newObj = oldObj;
+  if (oldObj && typeof oldObj === 'object') {
+    newObj = Object.prototype.toString.call(oldObj) === "[object Array]" ? [] : {};
+    for (var i in oldObj) {
+      newObj[i] = deepCopy(oldObj[i]);
     }
-    return newObj;
   }
+  return newObj;
+}
 
-  function hasSubstring(str1,str2) {
-    return (str1.indexOf(str2) != -1);
-  }
+function hasSubstring(str1,str2) {
+  return (str1.indexOf(str2) != -1);
+}
 
-  function runstrips(ops,members,move,current,goal,thisPlan,depth,callback) {
-    console.log('solving the blocks world problem with this pair of start and goal states')
-    console.log(deepCopy(current))
-    console.log(deepCopy(goal))
-    var result = strips(ops,members,move,current,goal,thisPlan,depth);
-    result.moves = [];
-    for (var i = result.triedMoves.length - 1; i >= 0; --i) {
-      result.moves.push(result.triedMoves[i]);
-    }
-    delete result.triedMoves;
-    console.log('DONE. calling callback with this result object')
-    console.log(deepCopy(result));
-    callback(result);
+function runstrips(ops,members,move,current,goal,thisPlan,depth,callback) {
+  console.log('solving the blocks world problem with this pair of start and goal states')
+  console.log(deepCopy(current))
+  console.log(deepCopy(goal))
+  var result = strips(ops,members,move,current,goal,thisPlan,depth);
+  result.moves = [];
+  for (var i = result.triedMoves.length - 1; i >= 0; --i) {
+    result.moves.push(result.triedMoves[i]);
   }
+  delete result.triedMoves;
+  console.log('DONE. calling callback with this result object')
+  console.log(deepCopy(result));
+  callback(result);
+}
 
 })();
