@@ -327,7 +327,7 @@
      function generateOperations(currentSingle, currentState, members, depth) {
       var ops = [];
       for (var i = 0; i < members.length; ++i) {
-        //console.log('i is ' + i + ' and members[i] is ' + members[i])
+        console.log('i is ' + i + ' and members[i] is ' + members[i])
         /* one-parameter operations */
         var pickup = new Op_pickup(members[i]);
         //console.log('new Op_pickup(), currentSingle, currentState')
@@ -341,6 +341,10 @@
           ops.push(pickup);
         }
         var putdown = new Op_putdown(members[i]);
+        console.log('generating putdown. what is the currentSingle?')
+        console.log(currentSingle)
+        console.log('putdown(' + members[i] + ') to be considered? ' + currentSingle.containsOne(putdown.a))
+
         if (currentSingle.containsOne(putdown.a)/* && currentState.containsAll(putdown.p)*/) {
           ops.push(putdown);
         }
@@ -626,18 +630,21 @@ function hasSubstring(str1,str2) {
 }
 
 function runstrips(ops,members,move,current,goal,thisPlan,callback) {
+  // console.log('runStrips()')
   var stack = move.p.expand();
-  var variations = 0;
-  var operations = [];
-  operations.push('goal');
+  // console.log(stack)
+  var startingPossibles = [];
   for (var i = 1; i < stack.length; ++i) {
-    console.log(stack[i])
+    // console.log(stack[i])
     var theseOps = ops.generateOperations(stack[i], current, members, 0);
-    operations.push(theseOps)
-    variations += theseOps.length
+    // console.log('theseOps where i = ' + i)
+    // console.log(theseOps)
+    for (var j = 0; j < theseOps.length; ++j) {
+      startingPossibles.push(theseOps[j].name);
+    }
   }
-  console.log('operations has a total of ' + variations + ' variations');
-
+  // console.log('startingPossibles has a total of ' + startingPossibles.length + ' variations');
+  // console.log(startingPossibles);
 
   var result = strips(ops,members,move,current,goal,thisPlan,1,move);
   result.moves = [];
