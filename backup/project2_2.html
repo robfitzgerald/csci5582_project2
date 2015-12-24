@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fitzgerald Artificial Intelligence Project 2</title>
+    <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="bower_components/Materialize/dist/css/materialize.css">
+    <link rel="stylesheet" href="app.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body ng-app="project2">
+    <h1>Stack-Based STRIPS Blocks World</h1>
+
+    <div class="container">
+        <nav class="row">
+            <a class="col s4 m4 l4 center-align" ui-sref="ex1">Example 1</a>
+            <a class="col s4 m4 l4 center-align" ui-sref="ex2">Example 2</a>
+            <a class="col s4 m4 l4 center-align" ui-sref="ex3">Example 3</a>
+        </nav>
+    </div>
+
+    <div class="container">
+        <div class="row link-categories">
+            <div class="col s12 m3 l3">
+                <ul class="collection with-header">
+                    <li class="collection-header teal darken-2">Moves</li>
+                    <li ng-repeat="move in ctrl.solution.moves">
+                        <span>{{move.name}}</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="col s12 m3 l3">
+                <ul class="collection with-header">
+                    <li class="collection-header teal darken-2">Current</li>
+                    <li ng-repeat="pred in ctrl.solution.current">
+                        <span>{{pred.name}}</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="col s12 m3 l3"></div>
+            <div class="col s12 m3 l3">
+                <ul class="collection with-header">
+                    <li class="collection-header teal darken-2">Stack</li>
+                    <li ng-repeat="pred in ctrl.solution.stack">
+                        <span>{{pred.name}}</span>
+                    </li>
+                </ul>
+            </div>
+
+
+        </div>
+        <div class="row">
+            <ul class="col s2 m2 l2">
+                <li ng-repeat="box in ctrl.solution.slotA">
+                    <!--<img ng-src="/img/{{box.name}}" alt="{{box.name}}"/>-->
+                    <h2 class="box">{{box.name}}</h2>
+                </li>
+            </ul>
+            <ul class="col s2 m2 l2">
+                <li ng-repeat="box in ctrl.solution.slotB">
+                    <h2 class="box">{{box.name}}</h2>
+                </li>
+            </ul>
+            <ul class="col s2 m2 l2">
+                <li ng-repeat="box in ctrl.solution.slotC">
+                    <h2 class="box">{{box.name}}</h2>
+                </li>
+            </ul>
+            <ul class="col s2 m2 l2">
+                <li ng-repeat="box in ctrl.solution.slotD">
+                    <h2 class="box">{{box.name}}</h2>
+                </li>
+            </ul>
+            <ul class="col s2 m2 l2">
+                <li></li>
+            </ul>
+            <ul class="col s2 m2 l2">
+                <li ng-repeat="box in ctrl.solution.arm">
+                    <h2 class="box">{{box.name}}</h2>
+                    <img ng-src="/img/arm.jpg" alt="arm">
+                </li>
+            </ul>
+        </div>
+        <div class="row">
+
+        </div>
+    </div>
+
+    <script src="bower_components/angular/angular.js"></script>
+    <script src="bower_components/angular-ui-router/release/angular-ui-router.js"></script>
+    <script type="text/javascript" src="bower_components/jquery/dist/jquery.js"></script>
+    <script src="bower_components/Materialize/dist/js/materialize.js"></script>
+    <script src="project2.module.js"></script>
+    <script src="strips.service.js"></script>
+    <script src="strips.controller_2.js"></script>
+</body>
+</html>

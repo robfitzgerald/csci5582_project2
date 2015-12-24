@@ -1,0 +1,72 @@
+<div class="container">
+    <div class="row">
+        <button class="col s6 m6 l6" ng-click="ctrl.runDemonstration()">Run Demonstration</button>
+        <button class="col s6 m6 l6" ng-click="ctrl.resetDemonstration()">Reset Demonstration</button>
+    </div>
+    <div class="row link-categories">
+        <div class="col s12 m3 l3">
+            <ul class="collection with-header">
+                <li class="collection-header teal darken-2">Moves</li>
+                <li ng-repeat="move in ctrl.result.moves">
+                    <span ng-class="{yellow: move.demoCurrent == true}">{{move.name}}</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="col s12 m3 l3">
+            <ul class="collection with-header">
+                <li class="collection-header teal darken-2">Current</li>
+                <li ng-repeat="pred in ctrl.result.current.list">
+                    <span>{{pred.toString()}}</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="col s12 m3 l3"></div>
+        <div class="col s12 m3 l3">
+            <ul class="collection with-header">
+                <li class="collection-header teal darken-2">Stack</li>
+                <li ng-repeat="pred in ctrl.result.goal.list">
+                    <span>{{pred.toString()}}</span>
+                </li>
+            </ul>
+        </div>
+
+
+    </div>
+    <div class="row">
+        <ul class="col s2 m2 l2">
+            <li ng-repeat="box in ctrl.result.slotA">
+                <!--<img ng-src="/img/{{box.name}}" alt="{{box.name}}"/>-->
+                <h2 class="box">{{box.name}}</h2>
+            </li>
+        </ul>
+        <ul class="col s2 m2 l2">
+            <li ng-repeat="box in ctrl.solution.slotB">
+                <h2 class="box">{{box.name}}</h2>
+            </li>
+        </ul>
+        <ul class="col s2 m2 l2">
+            <li ng-repeat="box in ctrl.solution.slotC">
+                <h2 class="box">{{box.name}}</h2>
+            </li>
+        </ul>
+        <ul class="col s2 m2 l2">
+            <li ng-repeat="box in ctrl.solution.slotD">
+                <h2 class="box">{{box.name}}</h2>
+            </li>
+        </ul>
+        <ul class="col s2 m2 l2">
+            <li></li>
+        </ul>
+        <ul class="col s2 m2 l2">
+            <li ng-repeat="box in ctrl.solution.arm">
+                <h2 class="box">{{box.name}}</h2>
+                <img ng-src="/img/arm.jpg" alt="arm">
+            </li>
+        </ul>
+    </div>
+    <div class="row">
+
+    </div>
+</div>

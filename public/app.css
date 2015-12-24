@@ -1,0 +1,9 @@
+h2.box {
+    border: 5px solid black;
+    padding: 40px;
+    margin: 20px;
+}
+
+ul.boxslot {
+    vertical-align: inherit;
+}

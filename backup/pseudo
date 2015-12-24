@@ -1,0 +1,32 @@
+move wraps a statement
+
+controller p2Ctrl
+    holds the current state statement
+
+factory blocksWorldOperations
+    has the data for each operation type
+    blocksWorldOperations.generateOperations(predicate)
+        returns array of moves
+
+we need to check the op.a(x,y)
+    current
+
+....
+
+ok, i have an array of moves generated outside the context of a state generation ƒn
+
+now, in context:
+
+current = top member of stack
+is it a predicate?
+    check if it's true
+
+;';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';';'
+
+thungs to fux (wit)
+put PRECONDITIONS on strips.stack, not ADD list
+one of which will be a statement we will need to evaluate.
+
+
+write out the pseudocode of strips()
+put console.log statements in place to generate the pseudocode itself

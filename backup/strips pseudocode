@@ -1,0 +1,15 @@
+STRIPS (initial-state, goals)
+– state = initial-state; plan = []; stack = []
+– Push goals on stack
+– Repeat until stack is empty
+• If top of stack is goal that matches state, then pop stack
+• Else if top of stack is a conjunctive goal g, then
+– Select an ordering for the subgoals of g, and push them on
+stack
+• Else if top of stack is a simple goal sg, then
+– Choose an operator o whose add-list matches goal sg
+– Replace goal sg with operator o
+– Push the preconditions of o on the stack
+• Else if top of stack is an operator o, then
+– state = apply(o, state)
+– plan = [plan; o]
