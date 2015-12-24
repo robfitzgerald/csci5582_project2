@@ -107,6 +107,7 @@
     var ex2GoalState = new Statement([
       new Predicate('on', 'B', 'C'),
       new Predicate('on', 'A', 'B')
+
       ]);
 
     var ex2Goal = {
@@ -541,7 +542,7 @@
         var possibleMoveName = possibleMoves[j].name;
         var oppositeOfPreviousMove = triedMoves[lastTriedMove].oppositeName;
         if (possibleMoveName === oppositeOfPreviousMove) {
-          //console.log('removing opposites where possible = ' + possibleMoveName + ' and opposite of previous = ' + oppositeOfPreviousMove)
+          console.log('removing opposites where possible = ' + possibleMoveName + ' and opposite of previous = ' + oppositeOfPreviousMove)
           possibleMoves.splice(j, 1);
         } 
       }
