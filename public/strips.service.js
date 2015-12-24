@@ -107,7 +107,6 @@
     var ex2GoalState = new Statement([
       new Predicate('on', 'B', 'C'),
       new Predicate('on', 'A', 'B')
-
       ]);
 
     var ex2Goal = {
@@ -385,8 +384,8 @@
    * @param {int} depth - track recursion depth
    * @returns {boolean}
    */
-   function strips(ops,members,move,current,goal,triedMoves,depth,parentMovePtr) {
-    if (depth > 14) {
+   function strips(ops,members,move,current,goal,triedMoves,depth,parentMovePtr,maxDepth) {
+    if ((maxDepth) && (depth > maxDepth)) {
       return {
         validBranch: false
       }
@@ -527,7 +526,10 @@
       var possibleMoveName = possibleMoves[j].name;
       for (var k = triedMoves.length-1; k >= 0; --k) {
         var previousMoveName = triedMoves[k].name;
-        if (possibleMoveName.indexOf('stack') != -1) {
+        if (
+          (possibleMoveName.indexOf('stack') != -1 && possibleMoveName.indexOf('un') == -1) ||
+          (possibleMoveName.indexOf('unstack') != -1)
+            ) {
           if (possibleMoveName === previousMoveName) {
             possibleMoves.splice(j, 1);
             k = -1;
@@ -621,22 +623,10 @@ function hasSubstring(str1,str2) {
 }
 
 function runstrips(ops,members,move,current,goal,thisPlan,depth,callback) {
-  // console.log('solving the blocks world problem with this pair of start and goal states')
-  // console.log(deepCopy(current))
-  // console.log(deepCopy(goal))
   var result = strips(ops,members,move,current,goal,thisPlan,depth,move);
   result.moves = [];
-  // for (var i = result.triedMoves.length - 1; i >= 0; --i) {
-  //   result.moves.push(result.triedMoves[i]);
-  // }
-  // for (var i = 0; i < result.triedMoves.length; ++i) {
-  //   console.log('about to recurse from base level')
-  //   findMoves(result.thisMove, result.moves);
-  // }
   findMoves(result.thisMove, result.moves);
   delete result.triedMoves;
-  console.log('DONE. calling callback with this result object')
-  console.log(deepCopy(result));
   callback(result);
 }
 
@@ -648,13 +638,9 @@ function findMoves(move,list) {
 }
 
 function _findMoves(move,list) {
-  // console.log('recursing with move ' + move.name)
-  // console.log(move);
   for (var i = 0; i < move.child.length; ++i) {
-    // console.log('move.child[i]\'s name is ' + move.child[i].name);
     _findMoves(move.child[i],list);
   }
-  // console.log('pushing ' + move.name + ' onto list')
   list.push(deepCopy(move));
 }
 
