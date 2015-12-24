@@ -20,7 +20,7 @@
 
     function example1() {
       var deferred = $q.defer();
-      runstrips(ops,members1,ex1Goal,ex1Start,ex1GoalState,[],1,function(result) {
+      runstrips(ops,members1,ex1Goal,ex1Start,ex1GoalState,[],function(result) {
         deferred.resolve({
           moves: result.moves,
           current: ex1Start,
@@ -32,7 +32,7 @@
 
     function example2() {
       var deferred = $q.defer();
-      runstrips(ops,members2,ex2Goal,ex2Start,ex2GoalState,[],1,function(result) {
+      runstrips(ops,members2,ex2Goal,ex2Start,ex2GoalState,[],function(result) {
         deferred.resolve({
           moves: result.moves,
           current: ex2Start,
@@ -45,7 +45,7 @@
     function example3() {
       var deferred = $q.defer();
       //console.log('example3()')
-      runstrips(ops,members3,ex3Goal,ex3Start,ex3GoalState,[],1,function(result) {
+      runstrips(ops,members3,ex3Goal,ex3Start,ex3GoalState,[],function(result) {
         //console.log('complete with result')
         //console.log(result)
         deferred.resolve({
@@ -366,8 +366,8 @@
         op.currentState = currentState.toString();
         op.depth = depth;
       })
-      // console.log('generatedOperations:')
-      // console.log(ops);
+      //console.log('generatedOperations:')
+      //console.log(ops);
       return ops;
     }
   }
@@ -390,12 +390,7 @@
         validBranch: false
       }
     }
-    var newStripsLog = "";
-    for (var i = 0; i < depth; ++i) {
-      newStripsLog += "~|";
-    }
-    newStripsLog += '~ strips() with move ' + move.name;
-    console.log(newStripsLog);
+     logNewStrips(depth,move);
     var stack = move.p.expand();
     for (var i = stack.length-1; i >= 0; --i) {
 
@@ -486,6 +481,14 @@
     }
   }
 
+  function logNewStrips(depth,move) {
+    var newStripsLog = "";
+    for (var i = 0; i < depth; ++i) {
+      newStripsLog += "~|";
+    }
+    newStripsLog += '~ strips() with move ' + move.name;
+    console.log(newStripsLog);
+  }
 
   // TODO: maybe could be rewritten without being O(n^2)
   // triedMoves is idempotent through this procedure, but since possibleMoves.length is not,
@@ -622,8 +625,21 @@ function hasSubstring(str1,str2) {
   return (str1.indexOf(str2) != -1);
 }
 
-function runstrips(ops,members,move,current,goal,thisPlan,depth,callback) {
-  var result = strips(ops,members,move,current,goal,thisPlan,depth,move);
+function runstrips(ops,members,move,current,goal,thisPlan,callback) {
+  var stack = move.p.expand();
+  var variations = 0;
+  var operations = [];
+  operations.push('goal');
+  for (var i = 1; i < stack.length; ++i) {
+    console.log(stack[i])
+    var theseOps = ops.generateOperations(stack[i], current, members, 0);
+    operations.push(theseOps)
+    variations += theseOps.length
+  }
+  console.log('operations has a total of ' + variations + ' variations');
+
+
+  var result = strips(ops,members,move,current,goal,thisPlan,1,move);
   result.moves = [];
   findMoves(result.thisMove, result.moves);
   delete result.triedMoves;
