@@ -88,7 +88,8 @@
       name: 'goal',
       p: ex1GoalState,
       a: new Statement(),
-      d: new Statement()
+      d: new Statement(),
+      child: []
     };
 
     var members2 = [
@@ -112,7 +113,8 @@
       name: 'goal',
       p: ex2GoalState,
       a: new Statement(),
-      d: new Statement()
+      d: new Statement(),
+      child: []
     };
 
     var members3 = [
@@ -138,7 +140,8 @@
       name: 'goal',
       p: ex3GoalState,
       a: new Statement(),
-      d: new Statement()
+      d: new Statement(),
+      child: []
     };
 
     return StripsFactory;
@@ -283,6 +286,7 @@
       this.d = new Statement([new Predicate('clear', y), new Predicate('holding', x)]);
       this.a = new Statement([new Predicate('armempty'), new Predicate('on', x, y)]);
       this.oppositeName = 'unstack(' + x + ',' + y + ')';
+      this.child = [];
     }
 
     function Op_unstack(x, y) {
@@ -291,6 +295,7 @@
       this.d = new Statement([new Predicate('on', x, y), new Predicate('armempty')]);
       this.a = new Statement([new Predicate('holding', x), new Predicate('clear', y)]);
       this.oppositeName = 'stack(' + x + ',' + y + ')';
+      this.child = [];
     }
 
     function Op_pickup(x) {
@@ -299,6 +304,7 @@
       this.d = new Statement([new Predicate('ontable', x), new Predicate('armempty')]);
       this.a = new Statement([new Predicate('holding', x)]);
       this.oppositeName = 'putdown(' + x + ')';
+      this.child = [];
     }
 
     function Op_putdown(x) {
@@ -307,6 +313,7 @@
       this.d = new Statement([new Predicate('holding', x)]);
       this.a = new Statement([new Predicate('ontable', x), new Predicate('armempty')]);
       this.oppositeName = 'pickup(' + x + ')';
+      this.child = [];
     }
 
 
@@ -359,8 +366,8 @@
         op.currentState = currentState.toString();
         op.depth = depth;
       })
-      console.log('generatedOperations:')
-      console.log(ops);
+      // console.log('generatedOperations:')
+      // console.log(ops);
       return ops;
     }
   }
@@ -377,15 +384,21 @@
    * @param {int} depth - track recursion depth
    * @returns {boolean}
    */
-   function strips(ops,members,move,current,goal,triedMoves,depth) {
+   function strips(ops,members,move,current,goal,triedMoves,depth,parentMovePtr) {
+    if (depth > 14) {
+      return {
+        validBranch: false
+      }
+    }
     var newStripsLog = "";
     for (var i = 0; i < depth; ++i) {
-      newStripsLog += "~";
+      newStripsLog += "~|";
     }
-    newStripsLog += 'strips() at depth ' + depth + ' with move ' + move.name;
+    newStripsLog += '~ strips() with move ' + move.name;
     console.log(newStripsLog);
     var stack = move.p.expand();
     for (var i = stack.length-1; i >= 0; --i) {
+
       // FINAL STEP: if all of the preconditions for a move are present in the current state, then apply move
       // else, this was not a valid branch.
       if (i == 0) {
@@ -402,7 +415,8 @@
           return {
             validBranch: true,
             current: deepCopy(current),
-            triedMoves: deepCopy(triedMoves)
+            triedMoves: deepCopy(triedMoves),
+            thisMove: move
           }
         } else {
           return {
@@ -411,9 +425,11 @@
             // triedMoves: deepCopy(triedMoves)
           }
         }
+
         // EASY STEP: this precondition is a match, so, pop it.
       } else if ((i == stack.length - 1) && current.containsAll(stack[i])) {
         stack.pop();
+
         // HARD STEP: this precondition isn't a match, so, generate possible moves and recurse.
       }  else {
         // console.log('about to call ops.generateOperations() from within strips()')
@@ -425,35 +441,40 @@
         for (var j = possibleMoves.length-1; j >= 0; --j) {
           var recurseMove = deepCopy(possibleMoves[j]);
           var recurseCurrent = deepCopy(current);
-          var 
-          for (var i = 0; i < triedMoves.length; ++i) {
+          // var 
+          // for (var i = 0; i < triedMoves.length; ++i) {
 
-          }
+          // }
           triedMoves.push(recurseMove);
           var recurseTriedMoves = deepCopy(triedMoves);
           //console.log('trying ' + recurseMove.name);
-          var recurse = strips(ops,members,recurseMove,recurseCurrent,goal,recurseTriedMoves,(depth+1));
+          var recurse = strips(ops,members,recurseMove,recurseCurrent,goal,recurseTriedMoves,(depth+1),move);
           if (recurse.validBranch) {
             /* prints search tree to console */
-            var tree = "";
+            // var tree = "";
             // for (var i = 0; i < depth; ++i) {
             //   tree += " ";
             // }
-            tree += recurseMove.name;
-            tree += "               | depth= " + depth + ", heuristic= " + recurseMove.heuristic;
-            tree += " triedMoves.length= " + triedMoves.length;
-            console.log(tree);
+            // tree += recurseMove.name;
+            // tree += "               | depth= " + depth + ", heuristic= " + recurseMove.heuristic;
+            // tree += " triedMoves.length= " + triedMoves.length;
+            // console.log(tree);
             triedMoves = deepCopy(recurse.triedMoves);
-            console.log(current.toString())
-            console.log(recurse.current.toString())
+            // console.log(current.toString())
+            // console.log(recurse.current.toString())
             current = deepCopy(recurse.current);
-            // if (depth == 1) {
-            //   console.log('added new moves to goal-level, and updated current')
-            //   console.log(deepCopy(triedMoves));
-            //   console.log(deepCopy(current));
-            //   console.log('i = ' + i);
-            //   //i = 1; // run for loop one more time so we catch the final return.
-            // }
+            // console.log('about to attach a child to the move')
+            // console.log(move);
+            move.child.push(deepCopy(recurse.thisMove));
+            // console.log('got here, so this didnt break stuff')
+
+            if (depth == 1) {
+              console.log('added new moves to goal-level, and updated current')
+              console.log(deepCopy(triedMoves));
+              console.log(deepCopy(current));
+              console.log('i = ' + i);
+              //i = 1; // run for loop one more time so we catch the final return.
+            }
             stack.pop();
             j = -1; // we're done applying moves to the predicate we just deleted, bro
           } else {
@@ -472,7 +493,7 @@
   function cullPossibleMoves(possibleMoves,triedMoves) {
     //console.log('cullPossibleMoves()');
     var lastTriedMove = ((triedMoves.length > 0) ? triedMoves.length - 1 : 0);
-    console.log('cullPossibleMoves(): lastTriedMove' + ' is ' + lastTriedMove);
+    // console.log('cullPossibleMoves(): lastTriedMove' + ' is ' + lastTriedMove);
 
     //no matter the move, don t do it twice in a row
     for (var j = possibleMoves.length-1; j >= 0; --j) {
@@ -501,18 +522,18 @@
     // 1. if we are stacking or unstacking ('stack' is a substring of 'unstack')
     // make sure we only ever use stack or unstack with
     // this exact list of parameters once in a list of triedMoves
-    // for (var j = possibleMoves.length-1; j >= 0; --j) {
-    //   var possibleMoveName = possibleMoves[j].name;
-    //   for (var k = triedMoves.length-1; k >= 0; --k) {
-    //     var previousMoveName = triedMoves[k].name;
-    //     if (possibleMoveName.indexOf('stack') != -1) {
-    //       if (possibleMoveName === previousMoveName) {
-    //         possibleMoves.splice(j, 1);
-    //         k = -1;
-    //       }
-    //     }
-    //   }  
-    // }
+    for (var j = possibleMoves.length-1; j >= 0; --j) {
+      var possibleMoveName = possibleMoves[j].name;
+      for (var k = triedMoves.length-1; k >= 0; --k) {
+        var previousMoveName = triedMoves[k].name;
+        if (possibleMoveName.indexOf('stack') != -1) {
+          if (possibleMoveName === previousMoveName) {
+            possibleMoves.splice(j, 1);
+            k = -1;
+          }
+        }
+      }  
+    }
 
     // 2. recognize opposites and remove them. 
     if (lastTriedMove > 0) {
@@ -520,7 +541,7 @@
         var possibleMoveName = possibleMoves[j].name;
         var oppositeOfPreviousMove = triedMoves[lastTriedMove].oppositeName;
         if (possibleMoveName === oppositeOfPreviousMove) {
-          console.log('removing opposites where possible = ' + possibleMoveName + ' and opposite of previous = ' + oppositeOfPreviousMove)
+          //console.log('removing opposites where possible = ' + possibleMoveName + ' and opposite of previous = ' + oppositeOfPreviousMove)
           possibleMoves.splice(j, 1);
         } 
       }
@@ -599,18 +620,41 @@ function hasSubstring(str1,str2) {
 }
 
 function runstrips(ops,members,move,current,goal,thisPlan,depth,callback) {
-  console.log('solving the blocks world problem with this pair of start and goal states')
-  console.log(deepCopy(current))
-  console.log(deepCopy(goal))
-  var result = strips(ops,members,move,current,goal,thisPlan,depth);
+  // console.log('solving the blocks world problem with this pair of start and goal states')
+  // console.log(deepCopy(current))
+  // console.log(deepCopy(goal))
+  var result = strips(ops,members,move,current,goal,thisPlan,depth,move);
   result.moves = [];
-  for (var i = result.triedMoves.length - 1; i >= 0; --i) {
-    result.moves.push(result.triedMoves[i]);
-  }
+  // for (var i = result.triedMoves.length - 1; i >= 0; --i) {
+  //   result.moves.push(result.triedMoves[i]);
+  // }
+  // for (var i = 0; i < result.triedMoves.length; ++i) {
+  //   console.log('about to recurse from base level')
+  //   findMoves(result.thisMove, result.moves);
+  // }
+  findMoves(result.thisMove, result.moves);
   delete result.triedMoves;
   console.log('DONE. calling callback with this result object')
   console.log(deepCopy(result));
   callback(result);
+}
+
+function findMoves(move,list) {
+  _findMoves(move,list);
+  // remove GOAL state which finds its way into list by way of the recurse operation
+  var lastInListIsTheGoalWeRemove = list.length - 1;
+  list.splice(lastInListIsTheGoalWeRemove, 1);
+}
+
+function _findMoves(move,list) {
+  // console.log('recursing with move ' + move.name)
+  // console.log(move);
+  for (var i = 0; i < move.child.length; ++i) {
+    // console.log('move.child[i]\'s name is ' + move.child[i].name);
+    _findMoves(move.child[i],list);
+  }
+  // console.log('pushing ' + move.name + ' onto list')
+  list.push(deepCopy(move));
 }
 
 })();
