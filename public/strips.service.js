@@ -19,7 +19,7 @@
 
     function example1() {
       var deferred = $q.defer();
-      runstrips(ops,members1,ex1Goal,ex1Start,ex1GoalState,[],1,function(result) {
+      runstrips(ops,members1,ex1Goal,ex1Start,ex1Goal,[],1,function(result) {
         deferred.resolve({
           moves: result.moves,
           current: ex1Start,
@@ -32,7 +32,7 @@
     function example2() {
       console.log('in StripsFactory.example2()')
       var deferred = $q.defer();
-      runstrips(ops,members2,ex2Goal,ex2Start,ex2GoalState,[],1,function(result) {
+      runstrips(ops,members2,ex2Goal,ex2Start,ex2Goal,[],1,function(result) {
         deferred.resolve({
           moves: result.moves,
           current: ex2Start,
@@ -45,7 +45,7 @@
     function example3() {
       var deferred = $q.defer();
       //console.log('example3()')
-      runstrips(ops,members3,ex3Goal,ex3Start,ex3GoalState,[],1,function(result) {
+      runstrips(ops,members3,ex3Goal,ex3Start,ex3Goal,[],1,function(result) {
         //console.log('complete with result')
         //console.log(result)
         deferred.resolve({
@@ -90,7 +90,7 @@
       a: new Statement(),
       d: new Statement(),
       child: [],
-      after: []
+      before: []
     };
 
     var members2 = [
@@ -117,7 +117,7 @@
       a: new Statement(),
       d: new Statement(),
       child: [],
-      after: []
+      before: []
     };
 
     var members3 = [
@@ -145,7 +145,7 @@
       a: new Statement(),
       d: new Statement(),
       child: [],
-      after: []
+      before: []
     };
 
     return StripsFactory;
@@ -293,7 +293,7 @@
       this.d = new Statement([new Predicate('clear', y), new Predicate('holding', x)]);
       this.a = new Statement([new Predicate('armempty'), new Predicate('on', x, y)]);
       this.child = [];
-      this.after = [];
+      this.before = [];
     }
 
     function Op_unstack(x, y) {
@@ -305,7 +305,7 @@
       this.d = new Statement([new Predicate('on', x, y), new Predicate('armempty')]);
       this.a = new Statement([new Predicate('holding', x), new Predicate('clear', y)]);
       this.child = [];
-      this.after = [];
+      this.before = [];
     }
 
     function Op_pickup(x) {
@@ -317,7 +317,7 @@
       this.d = new Statement([new Predicate('ontable', x), new Predicate('armempty')]);
       this.a = new Statement([new Predicate('holding', x)]);
       this.child = [];
-      this.after = [];
+      this.before = [];
     }
 
     function Op_putdown(x) {
@@ -329,7 +329,7 @@
       this.d = new Statement([new Predicate('holding', x)]);
       this.a = new Statement([new Predicate('ontable', x), new Predicate('armempty')]);
       this.child = [];
-      this.after = [];
+      this.before = [];
     }
 
 
@@ -400,7 +400,7 @@
    * @param {int} depth - track recursion depth
    * @returns {boolean}
    */
-   function strips(ops,members,move,current,goal,triedMoves,depth,parentMovePtr) {
+  function strips(ops,members,move,current,goal,triedMoves,depth,parentMovePtr) {
     if (depth > 6) {
       return {
         validBranch: false
@@ -412,7 +412,7 @@
       // FINAL STEP: if all of the preconditions for a move are present in the current state, then apply move
       // else, this was not a valid branch.
       if (i == 0) {
-        if (current.containsAll(stack[i]) || current.containsAll(goal)) {
+        if (current.containsAll(stack[i]) || current.containsAll(goal.p)) {
           // we don't modify the goal state at depth 1
           if (depth != 1) {
             current.deleteStatement(move.d);
@@ -435,7 +435,7 @@
         // HARD STEP: this precondition isn't a match, so, generate possible moves and recurse.
       }  else {
         var possibleMoves = ops.generateOperations(stack[i], current, members, depth);
-        // heuristic(possibleMoves,current,goal);
+        // heuristic(possibleMoves,current,goal.p);
         for (var j = possibleMoves.length-1; j >= 0; --j) {
           var recurseMove = deepCopy(possibleMoves[j]);
           var recurseCurrent = deepCopy(current);
@@ -444,9 +444,7 @@
           var recurse = strips(ops,members,recurseMove,recurseCurrent,goal,recurseTriedMoves,(depth+1),move);
           if (recurse.validBranch) {
             // debugPrintTree(triedMoves, recurseMove, depth);
-            console.log('goal')
-            console.log(goal)
-            orderMoves(goal,deepCopy(recurse.thisMove));
+            //orderMoves(goal,deepCopy(recurse.thisMove));
             triedMoves = deepCopy(recurse.triedMoves);
             current = deepCopy(recurse.current);
             move.child.push(deepCopy(recurse.thisMove));
@@ -461,22 +459,19 @@
     }
   }
 
-  function orderMoves(top, move) {
-    console.log('orderMoves called');
-    console.log(top)
-    console.log(top.child)
-
-    for (var i = 0; i < top.child.length; ++i) {
-      orderMoves(top.child[i], move);
-    }
-    if (top.p.containsOne(move.d)) {
-      console.log('found something requiring an ordering, where p.containsOne(d):')
-      console.log(top.p.toString())
-      console.log(move.d.toString())
-    } else {
-      console.log('nothing found to order.')
-    }
-  }
+  // function orderMoves(top, move) {
+  //   for (var i = 0; i < top.child.length; ++i) {
+  //     orderMoves(top.child[i], move);
+  //   }
+  //   if (top.p.containsOne(move.d)) {
+  //     top.before.push(move)
+  //     // console.log('found something requiring an ordering, where p.containsOne(d):')
+  //     // console.log(top.p.toString())
+  //     // console.log(move.d.toString())
+  //   } else {
+  //     // console.log('nothing found to order.')
+  //   }
+  // }
 
   /**
    * @description debug print function for the start of a new strips() call
@@ -584,7 +579,7 @@ function runstrips(ops,members,move,current,goal,thisPlan,depth,callback) {
   findMoves(result.thisMove, result.moves);
   delete result.triedMoves;
   deleteOpposites(result.moves);
-  console.log('DONE. calling callback with this result object')
+  console.log('--DONE--   calling callback with this result object')
   console.log(deepCopy(result));
   callback(result);
 }
