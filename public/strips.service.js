@@ -13,8 +13,7 @@
       Predicate: Predicate,
       Statement: Statement,
       moveNameFromString: moveNameFromString,
-      hasSubstring: hasSubstring,
-      cullPossibleMoves: cullPossibleMoves
+      hasSubstring: hasSubstring
     };
 
 
@@ -282,38 +281,46 @@
 
 
     function Op_stack(x, y) {
+      this.x = x;
+      this.y = y;
       this.name = 'stack(' + x + ',' + y + ')';
+      this.oppositeName = 'unstack(' + x + ',' + y + ')';
       this.p = new Statement([new Predicate('clear', y), new Predicate('holding', x)]);
       this.d = new Statement([new Predicate('clear', y), new Predicate('holding', x)]);
       this.a = new Statement([new Predicate('armempty'), new Predicate('on', x, y)]);
-      this.oppositeName = 'unstack(' + x + ',' + y + ')';
       this.child = [];
     }
 
     function Op_unstack(x, y) {
+      this.x = x;
+      this.y = y;
       this.name = 'unstack(' + x + ',' + y + ')';
+      this.oppositeName = 'stack(' + x + ',' + y + ')';
       this.p = new Statement([new Predicate('on', x, y), new Predicate('clear', x), new Predicate('armempty')]);
       this.d = new Statement([new Predicate('on', x, y), new Predicate('armempty')]);
       this.a = new Statement([new Predicate('holding', x), new Predicate('clear', y)]);
-      this.oppositeName = 'stack(' + x + ',' + y + ')';
       this.child = [];
     }
 
     function Op_pickup(x) {
+      this.x = x;
+      this.y = null;
       this.name = 'pickup(' + x + ')';
+      this.oppositeName = 'putdown(' + x + ')';
       this.p = new Statement([new Predicate('clear', x), new Predicate('ontable', x), new Predicate('armempty')]);
       this.d = new Statement([new Predicate('ontable', x), new Predicate('armempty')]);
       this.a = new Statement([new Predicate('holding', x)]);
-      this.oppositeName = 'putdown(' + x + ')';
       this.child = [];
     }
 
     function Op_putdown(x) {
+      this.x = x;
+      this.y = null;
       this.name = 'putdown(' + x + ')';
+      this.oppositeName = 'pickup(' + x + ')';
       this.p = new Statement([new Predicate('holding', x)]);
       this.d = new Statement([new Predicate('holding', x)]);
       this.a = new Statement([new Predicate('ontable', x), new Predicate('armempty')]);
-      this.oppositeName = 'pickup(' + x + ')';
       this.child = [];
     }
 
@@ -391,22 +398,12 @@
         validBranch: false
       }
     }
-    var newStripsLog = "";
-    for (var i = 0; i < depth; ++i) {
-      newStripsLog += "~|";
-    }
-    newStripsLog += '~ strips() with move ' + move.name;
-    console.log(newStripsLog);
+    // debugPrintNewStrips(depth,move);
     var stack = move.p.expand();
     for (var i = stack.length-1; i >= 0; --i) {
-
       // FINAL STEP: if all of the preconditions for a move are present in the current state, then apply move
       // else, this was not a valid branch.
       if (i == 0) {
-        // console.log('i = ' + i + ' and depth = ' + depth);
-        // console.log(deepCopy(current))
-        // console.log(deepCopy(goal))
-        // console.log('current.containsAll(goal) = ' + current.containsAll(goal))
         if (current.containsAll(stack[i]) || current.containsAll(goal)) {
           // we don't modify the goal state at depth 1
           if (depth != 1) {
@@ -422,60 +419,26 @@
         } else {
           return {
             validBranch: false,
-            // current: deepCopy(current),
-            // triedMoves: deepCopy(triedMoves)
           }
         }
-
         // EASY STEP: this precondition is a match, so, pop it.
       } else if ((i == stack.length - 1) && current.containsAll(stack[i])) {
         stack.pop();
-
         // HARD STEP: this precondition isn't a match, so, generate possible moves and recurse.
       }  else {
-        // console.log('about to call ops.generateOperations() from within strips()')
-        // console.log(stack[i])
-        // console.log(current)
         var possibleMoves = ops.generateOperations(stack[i], current, members, depth);
-        //cullPossibleMoves(possibleMoves,triedMoves);
         heuristic(possibleMoves,current,goal);
         for (var j = possibleMoves.length-1; j >= 0; --j) {
           var recurseMove = deepCopy(possibleMoves[j]);
           var recurseCurrent = deepCopy(current);
-          // var 
-          // for (var i = 0; i < triedMoves.length; ++i) {
-
-          // }
           triedMoves.push(recurseMove);
           var recurseTriedMoves = deepCopy(triedMoves);
-          //console.log('trying ' + recurseMove.name);
           var recurse = strips(ops,members,recurseMove,recurseCurrent,goal,recurseTriedMoves,(depth+1),move);
           if (recurse.validBranch) {
-            /* prints search tree to console */
-            // var tree = "";
-            // for (var i = 0; i < depth; ++i) {
-            //   tree += " ";
-            // }
-            // tree += recurseMove.name;
-            // tree += "               | depth= " + depth + ", heuristic= " + recurseMove.heuristic;
-            // tree += " triedMoves.length= " + triedMoves.length;
-            // console.log(tree);
+            // debugPrintTree(triedMoves, recurseMove, depth);
             triedMoves = deepCopy(recurse.triedMoves);
-            // console.log(current.toString())
-            // console.log(recurse.current.toString())
             current = deepCopy(recurse.current);
-            // console.log('about to attach a child to the move')
-            // console.log(move);
             move.child.push(deepCopy(recurse.thisMove));
-            // console.log('got here, so this didnt break stuff')
-
-            if (depth == 1) {
-              console.log('added new moves to goal-level, and updated current')
-              console.log(deepCopy(triedMoves));
-              console.log(deepCopy(current));
-              console.log('i = ' + i);
-              //i = 1; // run for loop one more time so we catch the final return.
-            }
             stack.pop();
             j = -1; // we're done applying moves to the predicate we just deleted, bro
           } else {
@@ -487,66 +450,30 @@
     }
   }
 
-
-  // TODO: maybe could be rewritten without being O(n^2)
-  // triedMoves is idempotent through this procedure, but since possibleMoves.length is not,
-  // each operation occurs inside its own nested loop structure
-  function cullPossibleMoves(possibleMoves,triedMoves) {
-    //console.log('cullPossibleMoves()');
-    var lastTriedMove = ((triedMoves.length > 0) ? triedMoves.length - 1 : 0);
-    // console.log('cullPossibleMoves(): lastTriedMove' + ' is ' + lastTriedMove);
-
-    //no matter the move, don t do it twice in a row
-    for (var j = possibleMoves.length-1; j >= 0; --j) {
-      var possibleMoveName = possibleMoves[j].name;
-      for (var k = triedMoves.length-1; k >= 0; --k) {
-        var previousMoveName = triedMoves[k].name;
-        if (hasSubstring(possibleMoveName,moveNameFromString(previousMoveName))) {
-          if ((possibleMoveName === previousMoveName) && (k == triedMoves.length-1)) {
-            possibleMoves.splice(j, 1);
-            k = -1;
-          }
-        }
-      }
+  /**
+   * @description debug print function for the start of a new strips() call
+   */
+  function debugPrintNewStrips(depth, move) {
+    var newStripsLog = "";
+    for (var i = 0; i < depth; ++i) {
+      newStripsLog += "~|";
     }
-    
-    // var previousMoveName = triedMoves[lastTriedMove].name;
-    // console.log(previousMoveName);
-    // possibleMoves.forEach(function(move,index,moves) {
-    //   console.log('checking ' + move.name)
-    //   if (hasSubstring(move.name,moveNameFromString(previousMoveName))) {
-    //     console.log('splicing index ' + index + ' which is move ' + move.name);
-    //     possibleMoves.splice(index,1);
-    //   }
-    // })
+    newStripsLog += '~ strips() with move ' + move.name;
+    console.log(newStripsLog);
+  }
 
-    // 1. if we are stacking or unstacking ('stack' is a substring of 'unstack')
-    // make sure we only ever use stack or unstack with
-    // this exact list of parameters once in a list of triedMoves
-    for (var j = possibleMoves.length-1; j >= 0; --j) {
-      var possibleMoveName = possibleMoves[j].name;
-      for (var k = triedMoves.length-1; k >= 0; --k) {
-        var previousMoveName = triedMoves[k].name;
-        if (possibleMoveName.indexOf('stack') != -1) {
-          if (possibleMoveName === previousMoveName) {
-            possibleMoves.splice(j, 1);
-            k = -1;
-          }
-        }
-      }  
+/**
+ * @description debug print function for the current search tree upon recurse success
+ */
+  function debugPrintTree(triedMoves, recurseMove, depth) {
+    var tree = "";
+    for (var i = 0; i < depth; ++i) {
+      tree += " ";
     }
-
-    // 2. recognize opposites and remove them. 
-    if (lastTriedMove > 0) {
-      for (var j = possibleMoves.length-1; j >= 0; --j) {
-        var possibleMoveName = possibleMoves[j].name;
-        var oppositeOfPreviousMove = triedMoves[lastTriedMove].oppositeName;
-        if (possibleMoveName === oppositeOfPreviousMove) {
-          console.log('removing opposites where possible = ' + possibleMoveName + ' and opposite of previous = ' + oppositeOfPreviousMove)
-          possibleMoves.splice(j, 1);
-        } 
-      }
-    }
+    tree += recurseMove.name;
+    tree += "               | depth= " + depth + ", heuristic= " + recurseMove.heuristic;
+    tree += " triedMoves.length= " + triedMoves.length;
+    console.log(tree);  
   }
 
 
@@ -626,15 +553,9 @@ function runstrips(ops,members,move,current,goal,thisPlan,depth,callback) {
   // console.log(deepCopy(goal))
   var result = strips(ops,members,move,current,goal,thisPlan,depth,move);
   result.moves = [];
-  // for (var i = result.triedMoves.length - 1; i >= 0; --i) {
-  //   result.moves.push(result.triedMoves[i]);
-  // }
-  // for (var i = 0; i < result.triedMoves.length; ++i) {
-  //   console.log('about to recurse from base level')
-  //   findMoves(result.thisMove, result.moves);
-  // }
   findMoves(result.thisMove, result.moves);
   delete result.triedMoves;
+  deleteOpposites(result.moves);
   console.log('DONE. calling callback with this result object')
   console.log(deepCopy(result));
   callback(result);
@@ -642,20 +563,37 @@ function runstrips(ops,members,move,current,goal,thisPlan,depth,callback) {
 
 function findMoves(move,list) {
   _findMoves(move,list);
-  // remove GOAL state which finds its way into list by way of the recurse operation
   var lastInListIsTheGoalWeRemove = list.length - 1;
   list.splice(lastInListIsTheGoalWeRemove, 1);
 }
 
 function _findMoves(move,list) {
-  // console.log('recursing with move ' + move.name)
-  // console.log(move);
   for (var i = 0; i < move.child.length; ++i) {
-    // console.log('move.child[i]\'s name is ' + move.child[i].name);
     _findMoves(move.child[i],list);
   }
-  // console.log('pushing ' + move.name + ' onto list')
   list.push(deepCopy(move));
+}
+
+function deleteOpposites(moves) {
+  for (var i = 0; i < moves.length - 1; ++i) {
+    for (var j = i + 1; j < moves.length; ++j) {
+      if (moves[i].x === moves[j].x && moves[i].y === moves[j].y) {
+        console.log('found matching parameters for ' + moves[i].name + ', ' + moves[j].name + ' at i,j=' + i + ', ' + j)
+        if (moves[i].name === moves[j].name || moves[i].name === moves[j].oppositeName) {
+          console.log('found matching name or opposite name')
+          //moves[j].deleteMe == true;
+          console.log('deleting i and j: ' + moves[i].name + ', ' + moves[j].name + ', and restarting search')
+          moves.splice(j,1)
+          moves.splice(i,1)
+          i = 0;
+          j = moves.length;
+        } else {
+          console.log('ending search for duplicates of this i')
+          j = moves.length;
+        }
+      }
+    }
+  }
 }
 
 })();
