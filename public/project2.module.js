@@ -28,12 +28,9 @@
           controllerAs: 'ctrl',
           resolve: {
             result: function (StripsFactory) {
+              console.log('calling StripsFactory.example2() from router')
               // console.log('ex2.resolve beginning')
               return StripsFactory.example2()
-                .catch(function (err) {
-                  console.log('resolve fail');
-                  return err;
-                })
             }
           }
         })
@@ -46,14 +43,14 @@
             result: function (StripsFactory) {
               // console.log('ex3.resolve beginning')
               return StripsFactory.example3()
-                .then(function (result) {
-                  // console.log('resolve success')
-                  return result;
-                })
-                .catch(function (err) {
-                  console.log('resolve fail')
-                  return err;
-                });
+                // .then(function (result) {
+                //   // console.log('resolve success')
+                //   return result;
+                // })
+                // .catch(function (err) {
+                //   console.log('resolve fail')
+                //   return err;
+                // });
             }
           }
         })
