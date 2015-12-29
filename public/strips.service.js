@@ -97,12 +97,12 @@
     ];
 
     var ex2Start = new Statement([
-      new Predicate('on', 'C', 'A'),
-      new Predicate('ontable', 'A'),
-      new Predicate('ontable', 'B'),
       new Predicate('armempty'),
       new Predicate('clear', 'B'),
-      new Predicate('clear', 'C')
+      new Predicate('clear', 'C'),
+      new Predicate('ontable', 'A'),
+      new Predicate('ontable', 'B'),
+      new Predicate('on', 'C', 'A')
       ]);
     var ex2GoalState = new Statement([
       new Predicate('on', 'B', 'C'),
@@ -386,7 +386,7 @@
    * @returns {boolean}
    */
    function strips(ops,members,move,current,goal,triedMoves,depth,parentMovePtr) {
-    if (depth > 14) {
+    if (depth > 6) {
       return {
         validBranch: false
       }
@@ -437,7 +437,7 @@
         // console.log(stack[i])
         // console.log(current)
         var possibleMoves = ops.generateOperations(stack[i], current, members, depth);
-        cullPossibleMoves(possibleMoves,triedMoves);
+        //cullPossibleMoves(possibleMoves,triedMoves);
         heuristic(possibleMoves,current,goal);
         for (var j = possibleMoves.length-1; j >= 0; --j) {
           var recurseMove = deepCopy(possibleMoves[j]);
