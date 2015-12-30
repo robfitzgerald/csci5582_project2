@@ -22,7 +22,7 @@ module.exports = function(config) {
       'public/*.module.js',
       'public/*.controller.js',
       'public/*.service.js',
-      'public/strips.service.unit.js'
+      'public/popStrips.service.unit.js'
     ],
 
     client: {

@@ -1,10 +1,10 @@
-(function() {
+(function () {
 
   angular
-  .module('project2')
-  .factory('StripsFactory', ['$q', StripsFactory]);
+    .module('project2')
+    .factory('StripsFactory', ['$q', '$log', StripsFactory]);
 
-  function StripsFactory($q) {
+  function StripsFactory($q, $log) {
     var StripsFactory = {
       example1: example1,  // simple problem
       example2: example2,  // sussman anomoly
@@ -19,7 +19,7 @@
 
     function example1() {
       var deferred = $q.defer();
-      runstrips(ops,members1,ex1Goal,ex1Start,ex1Goal,[],1,function(result) {
+      runstrips(ops, members1, ex1Goal, ex1Start, ex1Goal, [], 1, function (result) {
         deferred.resolve({
           moves: result.moves,
           current: ex1Start,
@@ -32,20 +32,29 @@
     function example2() {
       console.log('in StripsFactory.example2()')
       var deferred = $q.defer();
-      runstrips(ops,members2,ex2Goal,ex2Start,ex2Goal,[],1,function(result) {
+      // runstrips(ops,members2,ex2Goal,ex2Start,ex2Goal,[],1,function(result) {
+      //   deferred.resolve({
+      //     moves: result.moves,
+      //     current: ex2Start,
+      //     goal: ex2GoalState
+      //   });
+      // });
+      runPopStrips(ops, members2, ex2Start, ex2Goal, function (result) {
+        $log.info('result in StripsFactory.example2()')
+        $log.info(result);
         deferred.resolve({
-          moves: result.moves,
+          result: result,
           current: ex2Start,
-          goal: ex2GoalState
+          goal: ex2Goal
         });
-      });
+      })
       return deferred.promise;
     }
 
     function example3() {
       var deferred = $q.defer();
       //console.log('example3()')
-      runstrips(ops,members3,ex3Goal,ex3Start,ex3Goal,[],1,function(result) {
+      runstrips(ops, members3, ex3Goal, ex3Start, ex3Goal, [], 1, function (result) {
         //console.log('complete with result')
         //console.log(result)
         deferred.resolve({
@@ -61,7 +70,7 @@
     var ops = blocksWorldOperations();
 
     var members1 = [
-    'A', 'B', 'C', 'D'
+      'A', 'B', 'C', 'D'
     ];
 
     var ex1Start = new Statement([
@@ -73,7 +82,7 @@
       new Predicate('ontable', 'D'),
       new Predicate('ontable', 'C'),
       new Predicate('on', 'B', 'A')
-      ]);
+    ]);
     var ex1GoalState = new Statement([
       new Predicate('ontable', 'A'),
       new Predicate('ontable', 'D'),
@@ -82,7 +91,7 @@
       new Predicate('clear', 'C'),
       new Predicate('clear', 'B'),
       new Predicate('on', 'B', 'D')
-      ]);
+    ]);
 
     var ex1Goal = {
       name: 'goal',
@@ -94,22 +103,31 @@
     };
 
     var members2 = [
-    'A', 'B', 'C'
+      'A', 'B', 'C'
     ];
 
-    var ex2Start = new Statement([
+    var ex2StartState = new Statement([
       new Predicate('armempty'),
       new Predicate('clear', 'B'),
       new Predicate('clear', 'C'),
       new Predicate('ontable', 'A'),
       new Predicate('ontable', 'B'),
       new Predicate('on', 'C', 'A')
-      ]);
+    ]);
     var ex2GoalState = new Statement([
       new Predicate('on', 'B', 'C'),
       new Predicate('on', 'A', 'B')
 
-      ]);
+    ]);
+
+    var ex2Start = {
+      name: 'start',
+      p: new Statement(),
+      a: ex2StartState,
+      d: new Statement(),
+      child: [],
+      before: []
+    }
 
     var ex2Goal = {
       name: 'goal',
@@ -121,7 +139,7 @@
     };
 
     var members3 = [
-    'A', 'B', 'C', 'D'
+      'A', 'B', 'C', 'D'
     ];
 
     var ex3Start = new Statement([
@@ -134,11 +152,11 @@
       new Predicate('clear', 'B'),
       new Predicate('clear', 'C'),
       new Predicate('clear', 'D')
-      ]);
+    ]);
     var ex3GoalState = new Statement([
       new Predicate('on', 'A', 'B'),
       new Predicate('on', 'C', 'D')
-      ]);
+    ]);
     var ex3Goal = {
       name: 'goal',
       p: ex3GoalState,
@@ -159,7 +177,7 @@
    * @returns {Predicate}
    * @constructor
    */
-   function Predicate(name, val1, val2) {
+  function Predicate(name, val1, val2) {
     this.name = name;
     this.x = val1 || null;
     this.y = val2 || null;
@@ -168,6 +186,7 @@
     function equalTo(p) {
       return ((this.name === p.name) && (this.x === p.x) && (this.y === p.y));
     }
+
     function toString() {
       if (this.y != null) {
         return this.name + '(' + this.x + ',' + this.y + ')';
@@ -177,6 +196,31 @@
         return this.name + '()';
       }
     }
+
+    // PopStrips
+    this.open = true;
+    this.move = null;
+    this.setLink = setLink;
+    this.getLink = getLink;
+    this.clearLink = clearLink;
+    this.close = close;
+    this.isOpen = isOpen;
+
+    function setLink (move) {
+      this.move = move;
+    }
+    function getLink () {
+      return this.move;
+    }
+    function clearLink () {
+      this.move = null;
+    }
+    function close () {
+      this.open = false;
+    }
+    function isOpen () {
+      return this.open;
+    }
   }
 
   /**
@@ -184,7 +228,7 @@
    * @param {Array} predicates - array of Predicate objects
    * @constructor
    */
-   function Statement(predicates) {
+  function Statement(predicates) {
     this.list = predicates || [];
     this.containsOne = containsOne;
     this.containsAll = containsAll;
@@ -239,7 +283,7 @@
      * unpacks a statement into an array of singleton statements
      * @returns {Array} - array of Statements, each containing one predicate
      */
-     function expand() {
+    function expand() {
       var output = [(new Statement(this.list))];
       output[0].isAnExpandedStatement = true;
       for (var i = 0; i < this.list.length; ++i) {
@@ -263,7 +307,7 @@
       for (var j = 0; j < statement.list.length; ++j) {
         for (var i = 0; i < this.list.length; ++i) {
           if (this.list[i].equalTo(statement.list[j])) {
-            this.list.splice(i,1);
+            this.list.splice(i, 1);
           }
         }
       }
@@ -274,7 +318,7 @@
    * A Singleton used to generate moves specific to the blocks world
    * @returns {{generateOperations: generateOperations}}
    */
-   function blocksWorldOperations() {
+  function blocksWorldOperations() {
     return {
       generateOperations: generateOperations,
       Op_stack: Op_stack,
@@ -340,7 +384,7 @@
      * @param {Array} members, a string array
      * @returns {Array}
      */
-     function generateOperations(currentSingle, currentState, members, depth) {
+    function generateOperations(currentSingle, currentState, members, depth) {
       var ops = [];
       for (var i = 0; i < members.length; ++i) {
         //console.log('i is ' + i + ' and members[i] is ' + members[i])
@@ -378,8 +422,8 @@
           }
         }
       }
-      ops.forEach(function(op) {
-        op.currentState = currentState.toString();
+      ops.forEach(function (op) {
+        //op.currentState = currentState.toString();
         op.depth = depth;
       })
       // console.log('generatedOperations:')
@@ -396,19 +440,24 @@
    * @param move - the operation, of the form of a member of ops, which will begin this subproblem
    * @param current - the current state
    * @param goal - the goal state, which doesn't get mutated
-   * @param {Array} thisPlan -
+   * @param {Array} triedMoves -
    * @param {int} depth - track recursion depth
    * @returns {boolean}
    */
-  function strips(ops,members,move,current,goal,triedMoves,depth,parentMovePtr) {
+  function strips(ops, members, move, current, goal, triedMoves, depth, parentMovePtr) {
     if (depth > 6) {
       return {
         validBranch: false
       }
     }
-    // debugPrintNewStrips(depth,move);
+    //var newStripsLog = "";
+    //for (var i = 0; i < depth; ++i) {
+    //  newStripsLog += "~|";
+    //}
+    //newStripsLog += '~ strips() with move ' + move.name;
+    //console.log(newStripsLog);
     var stack = move.p.expand();
-    for (var i = stack.length-1; i >= 0; --i) {
+    for (var i = stack.length - 1; i >= 0; --i) {
       // FINAL STEP: if all of the preconditions for a move are present in the current state, then apply move
       // else, this was not a valid branch.
       if (i == 0) {
@@ -433,18 +482,24 @@
       } else if ((i == stack.length - 1) && current.containsAll(stack[i])) {
         stack.pop();
         // HARD STEP: this precondition isn't a match, so, generate possible moves and recurse.
-      }  else {
+      } else {
         var possibleMoves = ops.generateOperations(stack[i], current, members, depth);
         // heuristic(possibleMoves,current,goal.p);
-        for (var j = possibleMoves.length-1; j >= 0; --j) {
+        for (var j = possibleMoves.length - 1; j >= 0; --j) {
           var recurseMove = deepCopy(possibleMoves[j]);
           var recurseCurrent = deepCopy(current);
           triedMoves.push(recurseMove);
           var recurseTriedMoves = deepCopy(triedMoves);
-          var recurse = strips(ops,members,recurseMove,recurseCurrent,goal,recurseTriedMoves,(depth+1),move);
+          var recurse = strips(ops, members, recurseMove, recurseCurrent, goal, recurseTriedMoves, (depth + 1), move);
           if (recurse.validBranch) {
-            // debugPrintTree(triedMoves, recurseMove, depth);
-            //orderMoves(goal,deepCopy(recurse.thisMove));
+            //var tree = "";
+            //for (var i = 0; i < depth; ++i) {
+            //  tree += " ";
+            //}
+            //tree += recurseMove.name;
+            //tree += "               | depth= " + depth + ", heuristic= " + recurseMove.heuristic;
+            //tree += " triedMoves.length= " + triedMoves.length;
+            //console.log(tree);
             triedMoves = deepCopy(recurse.triedMoves);
             current = deepCopy(recurse.current);
             move.child.push(deepCopy(recurse.thisMove));
@@ -459,49 +514,8 @@
     }
   }
 
-  // function orderMoves(top, move) {
-  //   for (var i = 0; i < top.child.length; ++i) {
-  //     orderMoves(top.child[i], move);
-  //   }
-  //   if (top.p.containsOne(move.d)) {
-  //     top.before.push(move)
-  //     // console.log('found something requiring an ordering, where p.containsOne(d):')
-  //     // console.log(top.p.toString())
-  //     // console.log(move.d.toString())
-  //   } else {
-  //     // console.log('nothing found to order.')
-  //   }
-  // }
-
-  /**
-   * @description debug print function for the start of a new strips() call
-   */
-  function debugPrintNewStrips(depth, move) {
-    var newStripsLog = "";
-    for (var i = 0; i < depth; ++i) {
-      newStripsLog += "~|";
-    }
-    newStripsLog += '~ strips() with move ' + move.name;
-    console.log(newStripsLog);
-  }
-
-/**
- * @description debug print function for the current search tree upon recurse success
- */
-  function debugPrintTree(triedMoves, recurseMove, depth) {
-    var tree = "";
-    for (var i = 0; i < depth; ++i) {
-      tree += " ";
-    }
-    tree += recurseMove.name;
-    tree += "               | depth= " + depth + ", heuristic= " + recurseMove.heuristic;
-    tree += " triedMoves.length= " + triedMoves.length;
-    console.log(tree);  
-  }
-
-
-  function heuristic(possibleMoves,thisCurrent,goal) {
-    for (var j = possibleMoves.length-1; j >= 0; --j) {
+  function heuristic(possibleMoves, thisCurrent, goal) {
+    for (var j = possibleMoves.length - 1; j >= 0; --j) {
       if (goal.containsOne(possibleMoves[j].a)) {
         if (goal.containsAll(possibleMoves[j].a)) {
           // best possible
@@ -534,91 +548,173 @@
     // }
 
     // sort ascending, since we will move through array in descending order, and higher numbers are better
-    possibleMoves.sort(function moveHeuristicSort (a,b){
+    possibleMoves.sort(function moveHeuristicSort(a, b) {
       return a.heuristic - b.heuristic;
     });
 
     // possibleMoves.forEach(function(move,index,moves) {
     //   console.log(move.name + ' has heuristic ' + move.heuristic);
     // });
-}
+  }
 
-function moveNameFromString(str) {
-  var output = "";
-  for (var i = 0; i < str.length; ++i) {
-    if (str.charAt(i) == '(') {
-      return output;
-    } else {
-      output += str.charAt(i);
+  function moveNameFromString(str) {
+    var output = "";
+    for (var i = 0; i < str.length; ++i) {
+      if (str.charAt(i) == '(') {
+        return output;
+      } else {
+        output += str.charAt(i);
+      }
+    }
+    return output;
+  }
+
+  function deepCopy(oldObj) {
+    var newObj = oldObj;
+    if (oldObj && typeof oldObj === 'object') {
+      newObj = Object.prototype.toString.call(oldObj) === "[object Array]" ? [] : {};
+      for (var i in oldObj) {
+        newObj[i] = deepCopy(oldObj[i]);
+      }
+    }
+    return newObj;
+  }
+
+  function hasSubstring(str1, str2) {
+    return (str1.indexOf(str2) != -1);
+  }
+
+  function runstrips(ops, members, move, current, goal, thisPlan, depth, callback) {
+    console.log('solving the blocks world problem with this pair of start and goal states')
+    console.log(deepCopy(current))
+    console.log(deepCopy(goal))
+    var result = strips(ops, members, move, current, goal, thisPlan, depth, move);
+    result.moves = [];
+    findMoves(result.thisMove, result.moves);
+    delete result.triedMoves;
+    deleteOpposites(result.moves);
+    console.log('--DONE--   calling callback with this result object')
+    console.log(deepCopy(result));
+    callback(result);
+  }
+
+  function runPopStrips(ops, members, startMove, goalMove, callback) {
+    console.log('in runPopStrips()')
+    // set constraint start is less than goal
+    // no causal links
+    // goal preconditions are on the open precondition list
+    var start = deepCopy(startMove)
+    var goal = deepCopy(goalMove)
+    start.constraint = 0;
+    goal.constraint = 100;
+    var result = popStrips(ops, members, start, goal, 1);
+    callback(result);
+
+    function popStrips(ops, members, start, plan, depth) {
+
+      console.log('in popStrips()')
+      // while (open.length > 0) { /* the idea is that if the open list is kicked, we're done. */}
+      //var thisPrecondition = open.pop();
+      //if (thisPrecondition === undefined) {
+      //  // we're out of open preconditions. what are we doing here? return false right?
+      //  console.log('found no preconditions in open list')
+      //}
+      var open = getOpen(plan);
+      //console.log('open list')
+      //console.log(open)
+      var thisPrecondition = open[0];
+      thisPrecondition.close();
+      var preconditionAsStatement = new Statement([thisPrecondition]);
+      //console.log('closed it')
+      var dummyCurrentState = new Statement();
+      // TODO: handle when generateOperations is passed Predicate instead of Statement for param 1
+      var possibleMoves = ops.generateOperations(preconditionAsStatement, dummyCurrentState, members, null);
+      //console.log('possibleMoves')
+      //console.log(deepCopy(possibleMoves))
+      // TODO: order by heuristic?
+      for (var i = 0; i < possibleMoves.length; ++i) {
+        // pick i'th move and run with it
+        var thisMove = deepCopy(possibleMoves[i]);
+        //console.log('thisMove')
+        //console.log(deepCopy(thisMove))
+        // attach move to precondition
+        thisPrecondition.setLink(thisMove);
+        // set constraint: move.constraint = parent-of-precondition-constraint - 1
+        thisMove.constraint = thisPrecondition.parent.constraint - 1;
+        // TODO: resolve conflicts!!!!
+      }
+      // for next open precondition
+      // comes up with possible moves - stored with the precondition (predicate)
+      // tries each move
+      // add causal link and ordering constraint to plan
+      // if new, constrain start < A < B
+      // resolve conflicts:
+      //    between new causal link and all existing actions
+      //    between action and all existing causal links
+      // operators on partial plans
+      //    add link from existing plan to open precondition
+      //    add a step to fulfill an open condition
+      //    order one step wrt another to remove possible conflicts
+      // backtrack if unachievable (that's why we stored the possible moves w/ the precondition)
+      function addToOpenList(move) {
+        for (var i = 0; i < move.p.list.length; ++i) {
+          open.push(deepCopy(move.p.list[i]));
+        }
+      }
+      function getOpen(node) {
+        var open = [];
+        //console.log('in getOpen(), node is')
+        //console.log(node)
+        node.p.list.forEach(function(predicate) {
+          if (predicate.isOpen()) {
+            predicate.parent = node;
+            //console.log('pushing ' + predicate.toString())
+            open.push(predicate)
+          } else if (predicate.getLink() != null) {
+            //console.log('recurse on ' + predicate.toString())
+            open.concat(getOpen(predicate.getLink()))
+          }
+        });
+        return open;
+      }
     }
   }
-  return output;
-}
 
-function deepCopy(oldObj) {
-  var newObj = oldObj;
-  if (oldObj && typeof oldObj === 'object') {
-    newObj = Object.prototype.toString.call(oldObj) === "[object Array]" ? [] : {};
-    for (var i in oldObj) {
-      newObj[i] = deepCopy(oldObj[i]);
+  function findMoves(move, list) {
+    _findMoves(move, list);
+    var lastInListIsTheGoalWeRemove = list.length - 1;
+    list.splice(lastInListIsTheGoalWeRemove, 1);
+  }
+
+  function _findMoves(move, list) {
+    for (var i = 0; i < move.child.length; ++i) {
+      _findMoves(move.child[i], list);
     }
+    list.push(deepCopy(move));
   }
-  return newObj;
-}
 
-function hasSubstring(str1,str2) {
-  return (str1.indexOf(str2) != -1);
-}
-
-function runstrips(ops,members,move,current,goal,thisPlan,depth,callback) {
-  console.log('solving the blocks world problem with this pair of start and goal states')
-  console.log(deepCopy(current))
-  console.log(deepCopy(goal))
-  var result = strips(ops,members,move,current,goal,thisPlan,depth,move);
-  result.moves = [];
-  findMoves(result.thisMove, result.moves);
-  delete result.triedMoves;
-  deleteOpposites(result.moves);
-  console.log('--DONE--   calling callback with this result object')
-  console.log(deepCopy(result));
-  callback(result);
-}
-
-function findMoves(move,list) {
-  _findMoves(move,list);
-  var lastInListIsTheGoalWeRemove = list.length - 1;
-  list.splice(lastInListIsTheGoalWeRemove, 1);
-}
-
-function _findMoves(move,list) {
-  for (var i = 0; i < move.child.length; ++i) {
-    _findMoves(move.child[i],list);
-  }
-  list.push(deepCopy(move));
-}
-
-function deleteOpposites(moves) {
-  for (var i = 0; i < moves.length - 1; ++i) {
-    // for (var j = i + 1; j < moves.length; ++j) {
+  function deleteOpposites(moves) {
+    for (var i = 0; i < moves.length - 1; ++i) {
+      // for (var j = i + 1; j < moves.length; ++j) {
       var j = i + 1;
       // if (moves[i].x === moves[j].x && moves[i].y === moves[j].y) {
-        // console.log('found matching parameters for ' + moves[i].name + ', ' + moves[j].name + ' at i,j=' + i + ', ' + j)
-        if (moves[i].name === moves[j].name || moves[i].name === moves[j].oppositeName) {
-          console.log('found matching name or opposite name')
-          //moves[j].deleteMe == true;
-          console.log('deleting i and j: ' + moves[i].name + ', ' + moves[j].name + ', and restarting search')
-          // moves.splice(j,1)
-          // moves.splice(i,1)
-          moves.splice(i, 2);
-          i = 0;
-          // j = moves.length;
+      // console.log('found matching parameters for ' + moves[i].name + ', ' + moves[j].name + ' at i,j=' + i + ', ' + j)
+      if (moves[i].name === moves[j].name || moves[i].name === moves[j].oppositeName) {
+        console.log('found matching name or opposite name')
+        //moves[j].deleteMe == true;
+        console.log('deleting i and j: ' + moves[i].name + ', ' + moves[j].name + ', and restarting search')
+        // moves.splice(j,1)
+        // moves.splice(i,1)
+        moves.splice(i, 2);
+        i = 0;
+        // j = moves.length;
         // } else {
-          // console.log('nothing. moving on to next i')
-          // j = moves.length;
+        // console.log('nothing. moving on to next i')
+        // j = moves.length;
         // }
       }
-    // }
+      // }
+    }
   }
-}
 
 })();
