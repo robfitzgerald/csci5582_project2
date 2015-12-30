@@ -669,7 +669,8 @@
       if (depth > 4) {
         return false;
       }
-      console.log('~~~~~~~~~~~~~~~~~~~~~~~~in popStrips() of depth ' + depth)
+      console.log('~~~~~~~~~~~~~~~~~~~~~~~~in popStrips() of depth ' + depth + ' with plan:')
+      console.log(plan)
       var open = getOpen(plan);
       console.log('open list')
       console.log(open)
@@ -678,14 +679,14 @@
       var preconditionAsStatement = new Statement([thisPrecondition]);  // wrapper expected in generate logic
       // TODO: handle when generateOperations is passed Predicate instead of Statement for param 1
       var possibleMoves = ops.generatePopOperations(preconditionAsStatement, members, start);
-      console.log('possibleMoves length is ' + possibleMoves.length)
+      // console.log('possibleMoves length is ' + possibleMoves.length)
       //console.log(possibleMoves)
       // TODO: order by heuristic?
       for (var i = 0; i < possibleMoves.length; ++i) {
         // pick i'th move and run with it
         var thisMove = possibleMoves[i];
-        console.log('thisMove')
-        console.log(thisMove)
+        // console.log('thisMove')
+        // console.log(thisMove)
         // attach move to precondition
         thisPrecondition.setLink(thisMove);
 
@@ -693,12 +694,13 @@
         thisMove.constraint = thisPrecondition.parent.constraint - 1;
         // TODO: resolve conflicts!!!!
         //conflicts(thisPrecondition.parent);
-        var moves = getMoves(plan);
-        console.log(moves);
-        var noConflicts = applyCausality(moves);
+        // var moves = getMoves(plan);
+        // console.log('list of moves')
+        // console.log(moves);
+        // var noConflicts = applyCausality(moves);
         var recurse = popStrips(ops, members, start, plan, depth + 1);
-        console.log('recurse back to PopTartStrips @ depth ' + depth)
-        console.log(recurse)
+        // console.log('recurse back to PopTartStrips @ depth ' + depth)
+        // console.log(recurse)
         if (noConflicts) {
           return true;
         }
@@ -719,7 +721,7 @@
               if (i != j) {
                 var moveJ = moves[j];
                 if ((moveI.d.containsOne(moveJ.p)) && (moveI.constraint == moveJ.constraint)) {
-                  console.log('found a conflict between ' + moveI.name + ' and ' + moveJ.name);
+                  // console.log('found a conflict between ' + moveI.name + ' and ' + moveJ.name);
                   noConflicts = false;
                 }
               }
@@ -731,12 +733,12 @@
       }
 
       function getMoves(node) {
-        console.log('getMoves()')
+        // console.log('getMoves()')
         var moves = [];
         node.p.list.forEach(function(predicate) {
           var move = predicate.getLink();
           if (move) {
-            console.log('found a move: ' + move.name)
+            //console.log('found a move: ' + move.name)
             moves.push(move)
             moves.concat(getMoves(move))
           }
@@ -745,18 +747,27 @@
       }
       function getOpen(node) {
         var open = [];
-        //console.log('in getOpen(), node is')
-        //console.log(node)
+        // console.log('in getOpen(), node is')
+        // console.log(node)
         node.p.list.forEach(function(predicate) {
           if (predicate.isOpen()) {
             predicate.parent = node;
-            //console.log('pushing ' + predicate.toString())
+            // console.log('pushing ' + predicate.toString())
             open.push(predicate)
-          } else if (predicate.getLink() != null) {
-            //console.log('recurse on ' + predicate.toString())
-            open.concat(getOpen(predicate.getLink()))
+          } else if (predicate.getLink()) {
+            // console.log('recurse on ' + predicate.toString())
+            var recurse = getOpen(predicate.getLink());
+            // console.log('recurse complete with result:')
+            // console.log(recurse);
+            recurse.forEach(function(res) {
+              open.push(res);
+            })
+            //open.concat(recurse);  Array.prototype.concat was failing.
+            // console.log('concatenated recurse result with open list to produce a list of length ' + open.length)
           }
         });
+        // // console.log('resulting open list:')
+        // console.log(open)
         return open;
       }
     }
