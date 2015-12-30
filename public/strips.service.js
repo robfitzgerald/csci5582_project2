@@ -198,21 +198,38 @@
 
     // PopStrips
     this.open = true;
-    this.move = null;
-    this.setLink = setLink;
-    this.getLink = getLink;
-    this.clearLink = clearLink;
+    this.causalLinks = [];
+    this.setCausalLink = setCausalLink;
+    this.getCausalLinks = getCausalLinks;
+    this.hasCausalLink = hasCausalLink;
+    this.removeCausalLink = removeCausalLink;
     this.close = close;
     this.isOpen = isOpen;
 
-    function setLink (move) {
-      this.move = move;
+    function setCausalLink (pred) {
+      this.causalLinks.push(pred);
+      this.open = false;
     }
-    function getLink () {
-      return this.move;
+    function getCausalLinks () {
+      return this.causalLinks;
     }
-    function clearLink () {
-      this.move = null;
+    /**
+     * @desc identifies if a predicate on a precondition list has a causal link. should only be 1.
+     */
+    function hasCausalLink() {
+      var numLinks = this.causalLinks.length;
+      return (numLinks == 1);
+    }
+    function removeCausalLink(pred) {
+      var found = null;
+      for (var i = 0; i < this.causalLinks.length; ++i) {
+        if (this.causalLinks[i].equalTo(pred)) {
+          found = i;
+        }
+      }
+      if (found) {
+        this.causalLinks.splice(i,1);
+      }
     }
     function close () {
       this.open = false;
@@ -230,6 +247,7 @@
   function Statement(predicates) {
     this.list = predicates || [];
     this.containsOne = containsOne;
+    this.containsSome = containsSome;
     this.containsAll = containsAll;
     this.toString = toString;
     this.addStatement = addStatement;
@@ -256,6 +274,21 @@
         }
       }
       return false;
+    }
+
+    function containsSome(s) {
+      var count = 0;
+      for (var i = 0; i < this.list.length; ++i) {
+        ////console.log('list[' + i + '] is ' + list[i].name);
+        for (var j = 0; j < s.list.length; ++j) {
+          ////console.log('s.list[' + j + '] is ' + s.list[j].name);
+          if (this.list[i].equalTo(s.list[j])) {
+            ////console.log('found! ' + list[i].name + ' equalTo ' + s.list[j].name);
+            ++count;
+          }
+        }
+      }
+      return count;
     }
 
     function containsAll(s) {
@@ -337,7 +370,8 @@
       this.d = new Statement([new Predicate('clear', y), new Predicate('holding', x)]);
       this.a = new Statement([new Predicate('armempty'), new Predicate('on', x, y)]);
       this.child = [];
-      this.causalLinks = [];
+      this.orderBefore = null;
+      this.orderAfter = null;
     }
 
     function Op_unstack(x, y) {
@@ -349,7 +383,8 @@
       this.d = new Statement([new Predicate('on', x, y), new Predicate('armempty')]);
       this.a = new Statement([new Predicate('holding', x), new Predicate('clear', y)]);
       this.child = [];
-      this.causalLinks = [];
+      this.orderBefore = null;
+      this.orderAfter = null;
     }
 
     function Op_pickup(x) {
@@ -361,7 +396,8 @@
       this.d = new Statement([new Predicate('ontable', x), new Predicate('armempty')]);
       this.a = new Statement([new Predicate('holding', x)]);
       this.child = [];
-      this.causalLinks = [];
+      this.orderBefore = null;
+      this.orderAfter = null;
     }
 
     function Op_putdown(x) {
@@ -373,7 +409,8 @@
       this.d = new Statement([new Predicate('holding', x)]);
       this.a = new Statement([new Predicate('ontable', x), new Predicate('armempty')]);
       this.child = [];
-      this.causalLinks = [];
+      this.orderBefore = null;
+      this.orderAfter = null;
     }
 
 
@@ -431,23 +468,19 @@
       return ops;
     }
 
-    function generatePopOperations(currentSingle,members,start) {
+    function generatePopOperations(predicate,members,start) {
       var ops = [];
+      var evaluateAsStatement = new Statement([predicate]);
       for (var i = 0; i < members.length; ++i) {
         //console.log('i is ' + i + ' and members[i] is ' + members[i])
         /* one-parameter operations */
         var pickup = new Op_pickup(members[i]);
-        //console.log('new Op_pickup(), currentSingle')
-        //console.log(pickup)
-        //console.log(currentSingle)
 
-        //console.log('(currentSingle.containsOne(pickup.a) && currentState.containsAll(pickup.p)): ' + (currentSingle.containsOne(pickup.a) && currentState.containsAll(pickup.p)))
-
-        if (currentSingle.containsOne(pickup.a)/* && currentState.containsAll(pickup.p)*/) {
+        if (evaluateAsStatement.containsOne(pickup.a)) {
           ops.push(pickup);
         }
         var putdown = new Op_putdown(members[i]);
-        if (currentSingle.containsOne(putdown.a)/* && currentState.containsAll(putdown.p)*/) {
+        if (evaluateAsStatement.containsOne(putdown.a)) {
           ops.push(putdown);
         }
 
@@ -458,27 +491,31 @@
           } else {
             /* two-parameter operations */
             var stack = new Op_stack(members[i], members[j]);
-            if (currentSingle.containsOne(stack.a)/* && currentState.containsAll(stack.p)*/) {
+            if (evaluateAsStatement.containsOne(stack.a)) {
               ops.push(stack);
             }
             var unstack = new Op_unstack(members[i], members[j]);
-            if (currentSingle.containsOne(unstack.a)/* && currentState.containsAll(unstack.p)*/) {
+            if (evaluateAsStatement.containsOne(unstack.a)) {
               ops.push(unstack);
             }
           }
         }
       }
       //console.log('done iterative.')
-      if (currentSingle.containsOne(start.a)) {
+      if (evaluateAsStatement.containsOne(start.a)) {
         ops.push(start);
       }
       //console.log('done checking start.')
       ops.forEach(function (op) {
         //console.log('forEach: ' + op.name)
-        op.p.list.map(function(predicate) {
-          //console.log('map: ' + predicate.toString());
-          predicate.parent = op;
+        op.p.list.map(function(operationPredicate) {
+          //console.log('map: ' + operationPredicate.toString());
+          operationPredicate.parent = op;
         })
+        op.a.list.map(function(operationPredicate) {
+          //console.log('map: ' + operationPredicate.toString());
+          operationPredicate.parent = op;
+        })       
       });
        console.log('generatedPopOperations:')
        console.log(ops);
@@ -538,7 +575,7 @@
         // HARD STEP: this precondition isn't a match, so, generate possible moves and recurse.
       } else {
         var possibleMoves = ops.generateOperations(stack[i], current, members, depth);
-        // heuristic(possibleMoves,current,goal.p);
+        // stripsHeuristic(possibleMoves,current,goal.p);
         for (var j = possibleMoves.length - 1; j >= 0; --j) {
           var recurseMove = deepCopy(possibleMoves[j]);
           var recurseCurrent = deepCopy(current);
@@ -551,7 +588,7 @@
             //  tree += " ";
             //}
             //tree += recurseMove.name;
-            //tree += "               | depth= " + depth + ", heuristic= " + recurseMove.heuristic;
+            //tree += "               | depth= " + depth + ", stripsHeuristic= " + recurseMove.stripsHeuristic;
             //tree += " triedMoves.length= " + triedMoves.length;
             //console.log(tree);
             triedMoves = deepCopy(recurse.triedMoves);
@@ -568,7 +605,7 @@
     }
   }
 
-  function heuristic(possibleMoves, thisCurrent, goal) {
+  function stripsHeuristic(possibleMoves, thisCurrent, goal) {
     for (var j = possibleMoves.length - 1; j >= 0; --j) {
       if (goal.containsOne(possibleMoves[j].a)) {
         if (goal.containsAll(possibleMoves[j].a)) {
@@ -660,76 +697,124 @@
     // goal preconditions are on the open precondition list
     var start = deepCopy(startMove)
     var goal = deepCopy(goalMove)
+    console.log('plan')
+    console.log(goal)
     start.constraint = 0;
     goal.constraint = 100;
     var result = popStrips(ops, members, start, goal, 1);
     callback(result);
 
+    function printPlan(node) {
+      var header = '';
+      for (var i = 0; i < (100 - node.constraint); ++i) {
+        header += ' ';
+      }
+      header += node.name;
+      console.log(header);
+      node.p.list.forEach(function(precondition) {
+        if (!precondition.isOpen()) {
+          console.log(header + ' ' + precondition.toString() + ' --> ')
+          var recurseOn = precondition.causalLinks[0].parent;
+          // console.log('recurse on this move:')
+          // console.log(recurseOn)
+          printPlan(recurseOn);
+        }
+      })
+    }
+
     function popStrips(ops, members, start, plan, depth) {
       if (depth > 4) {
         return false;
       }
-      console.log('~~~~~~~~~~~~~~~~~~~~~~~~in popStrips() of depth ' + depth + ' with plan:')
-      console.log(plan)
+      console.log('~~~~~~~~~~~~~~~~~~~~~~~~in popStrips() of depth ' + depth)
+      // console.log(plan)
       var open = getOpen(plan);
       console.log('open list')
       console.log(open)
+      if (open.length == 0) {
+        return plan;
+      }
       var thisPrecondition = open[0];
       thisPrecondition.close();
-      var preconditionAsStatement = new Statement([thisPrecondition]);  // wrapper expected in generate logic
+      //var preconditionAsStatement = new Statement([thisPrecondition]);  // wrapper expected in generate logic
       // TODO: handle when generateOperations is passed Predicate instead of Statement for param 1
-      var possibleMoves = ops.generatePopOperations(preconditionAsStatement, members, start);
+      var possibleMoves = ops.generatePopOperations(thisPrecondition, members, start);
       // console.log('possibleMoves length is ' + possibleMoves.length)
+      
+      >>>>>> WHY IS IT NOT USING PICKUP AND PUTDOWN?
+
+      removeDuplicateMoves(possibleMoves, thisPrecondition);
       //console.log(possibleMoves)
-      // TODO: order by heuristic?
+      heuristicSort(possibleMoves,start);
       for (var i = 0; i < possibleMoves.length; ++i) {
         // pick i'th move and run with it
         var thisMove = possibleMoves[i];
         // console.log('thisMove')
-        // console.log(thisMove)
-        // attach move to precondition
-        thisPrecondition.setLink(thisMove);
-
+        // console.log(thisMove);
+        // connect chosen move precondition to this closed precondition
+        var connectedMovePredicate = findMatchingPredicateIn(thisPrecondition, thisMove.a.list);
+        connectPredicates(thisPrecondition,connectedMovePredicate);
         // set constraint: move.constraint = parent-of-precondition-constraint - 1
         thisMove.constraint = thisPrecondition.parent.constraint - 1;
-        // TODO: resolve conflicts!!!!
-        //conflicts(thisPrecondition.parent);
-        // var moves = getMoves(plan);
-        // console.log('list of moves')
-        // console.log(moves);
-        // var noConflicts = applyCausality(moves);
+        // connect any predicates on the open list to the start.a.list if we can
+        start.a.list.forEach(function(startPredicate) {
+          if (startPredicate.isOpen()) {
+            open.forEach(function(openPredicate) {
+              if (startPredicate.equalTo(openPredicate)) {
+                connectPredicates(startPredicate,openPredicate);
+              }
+            })
+          }
+        })
         var recurse = popStrips(ops, members, start, plan, depth + 1);
+        if (recurse) {
+          return recurse;
+        }
+        disconnectPredicates(thisPrecondition,connectedMovePredicate);
         // console.log('recurse back to PopTartStrips @ depth ' + depth)
         // console.log(recurse)
-        if (noConflicts) {
-          return true;
+        // if (noConflicts) {
+        //   return true;
+        // }
+        //printPlan(plan);
+      }
+
+      function removeDuplicateMoves (possibleMoves, thisPrecondition) {
+        // console.log('removeDuplicateMoves()');
+        var thisMove = thisPrecondition.parent;
+        for (var i = possibleMoves.length - 1; i >= 0; --i) {
+          // console.log('testing move ' + i + ' in possibleMoves')
+          // console.log(thisMove.oppositeName + ' === ' + possibleMoves[i].name + ' ? ' + (thisMove.oppositeName === possibleMoves[i].name))
+          // console.log(thisMove.name + ' === ' + possibleMoves[i].name + ' ? ' + (thisMove.name === possibleMoves[i].name))
+          if (thisMove.oppositeName === possibleMoves[i].name || thisMove.name === possibleMoves[i].moveNameFromString) {
+            // console.log('deleting ' + possibleMoves[i].name + ' from possibleMoves because it is the opposite of this move: ' + thisMove.name)
+            var spliced = possibleMoves.splice(i,1);
+            // console.log('spliced ' + spliced[0].name);
+          }
         }
       }
 
-      /**
-       * @description applies rules of causality to all moves at this point in planning
-       * @param moves
-       * @returns {boolean}
-       * @constructor
-       */
-      function applyCausality(moves) {
-        var noConflicts = true;
-        for (var i = 0; i < moves.length; ++i) {
-          var moveI = moves[i];
-          if (moveI) {
-            for (var j = 0; j < moves.length; ++j) {
-              if (i != j) {
-                var moveJ = moves[j];
-                if ((moveI.d.containsOne(moveJ.p)) && (moveI.constraint == moveJ.constraint)) {
-                  // console.log('found a conflict between ' + moveI.name + ' and ' + moveJ.name);
-                  noConflicts = false;
-                }
-              }
-            }
-          }
-        }
-
-        return noConflicts;
+      function heuristicSort (possibles,start) {
+        // for each possible move,
+        //   better moves have preconditions that match the start state's a.list predicates
+        // so, given the start state and the list possibleMoves, assign value based on
+        //  # of matches between predicates
+        var openStartPredicates = start.a.list.filter(function removeClosed(predicate) {
+          // console.log('checking if this is true to keep this one: ' + predicate.isOpen());
+          return predicate.isOpen();
+        })
+        var openStartStatement = new Statement(openStartPredicates);
+        possibles.forEach(function(move) {
+          var count = move.p.containsSome(openStartStatement);
+          // console.log('count becomes heuristic: ' + count)
+          // console.log('where containsOne is ' + move.p.containsOne(start.a) + ' and containsAll is ' + move.p.containsAll (start.a))
+          move.heuristic = count;
+        })
+        possibles.sort(function popHeuristicSort(a,b) {
+          return b.heuristic - a.heuristic;
+        })
+        console.log('after heuristic sort')
+        console.log(possibles)
       }
 
       function getMoves(node) {
@@ -754,21 +839,75 @@
             predicate.parent = node;
             // console.log('pushing ' + predicate.toString())
             open.push(predicate)
-          } else if (predicate.getLink()) {
+          } else if (predicate.hasCausalLink()) {
             // console.log('recurse on ' + predicate.toString())
-            var recurse = getOpen(predicate.getLink());
+            var links = predicate.getCausalLinks();
+            var parentMoveOfLinkedPredicate = links[0].parent;
+            var recurse = getOpen(parentMoveOfLinkedPredicate);
             // console.log('recurse complete with result:')
             // console.log(recurse);
             recurse.forEach(function(res) {
               open.push(res);
             })
-            //open.concat(recurse);  Array.prototype.concat was failing.
+            // open.concat(recurse);  Array.prototype.concat was failing.
             // console.log('concatenated recurse result with open list to produce a list of length ' + open.length)
           }
         });
-        // // console.log('resulting open list:')
+        // console.log('resulting open list:')
         // console.log(open)
         return open;
+      }
+
+      function findMatchingPredicateIn(predicate,moveList) {
+        // console.log('findMatchingPredicateIn()')
+        // console.log(predicate)
+        // console.log(moveList)
+        var result = null;
+        moveList.forEach(function(movePredicate) {
+          // console.log('checking if this is true: ' + movePredicate.equalTo(predicate))
+          if (movePredicate.equalTo(predicate)) {
+            // console.log('returning the pred')
+            result = movePredicate;
+          }
+        })
+        return result;
+      }
+
+      function connectPredicates(p1, p2) {
+        var p1Links = p1.getCausalLinks();
+        var p2Links = p2.getCausalLinks();
+        var notYetLinked = true;
+        p1Links.forEach(function(link) {
+          if (link.equalTo(p2)) {
+            notYetLinked = false;
+          }
+        })
+        p2Links.forEach(function(link) {
+          if (link.equalTo(p1)) {
+            notYetLinked = false;
+          }
+        })
+        if (notYetLinked) {
+          p1.setCausalLink(p2);
+          p2.setCausalLink(p1);          
+        }
+        // console.log('causal links set')
+        // console.log(p1)
+        // console.log(p2)
+      }
+
+      function disconnectPredicates(p1, p2) {
+        // console.log('these two were previously linked together')
+        // console.log('p1 had ' + p1.causalLinks.length + ' links and p2 had ' + p2.causalLinks.length + ' links')
+        // console.log(p1)
+        // console.log(p2)
+        p1.removeCausalLink(p2);
+        p2.removeCausalLink(p1);
+      }
+
+      function connectMoves(m1, m2) {
+        m1.orderBefore = m2;
+        m2.orderAfter = m1;
       }
     }
   }
