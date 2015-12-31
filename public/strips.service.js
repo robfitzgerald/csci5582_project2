@@ -785,6 +785,7 @@
       removeDuplicateMoves(possibleMoves, thisPrecondition);
       //console.log(possibleMoves)
       heuristicSort(possibleMoves,start);
+      ////////////////////////////// APPLY MOVE //////////////////////////////
       for (var i = 0; i < possibleMoves.length; ++i) {
         // pick i'th move and run with it
         var thisMove = possibleMoves[i];
@@ -800,12 +801,17 @@
           if (startPredicate.isOpen()) {
             open.forEach(function(openPredicate) {
               if (startPredicate.equalTo(openPredicate)) {
-
                 connectPredicates(startPredicate,openPredicate);
               }
             })
           }
         })
+
+        ////////////////////////// ORDERING //////////////////////////
+        var allConnectedMoves = getMoves(plan);
+        console.log('allConnectedMoves:')
+        console.log(allConnectedMoves)
+
         var recurse = popStrips(ops, members, start, plan, depth + 1);
         console.log(spacer + 'return from recurse with openConditionsListIsEmpty=' + recurse.openConditionsListIsEmpty);
         if (recurse.openConditionsListIsEmpty) {
@@ -860,19 +866,54 @@
         // console.log(possibles)
       }
 
+      /**
+       *
+       * @desc finds moves that are attached to the top node, not including the top. used to generate ordering.
+       */
       function getMoves(node) {
-        // console.log('getMoves()')
-        var moves = [];
-        node.p.list.forEach(function(predicate) {
-          var move = predicate.getLink();
-          if (move) {
-            //console.log('found a move: ' + move.name)
-            moves.push(move)
-            moves.concat(getMoves(move))
+        var ignoreNames = ['goal', 'start']
+        var moves = _getMoves(node);
+        // OMG tried Array.prototype.filter over and over, no dice.
+        for (var i = moves.length - 1; i >= 0; --i) {
+          for (var j = 0; j < ignoreNames.length; ++j) {
+            if (moves[i].name === ignoreNames[j]) {
+              moves.splice(i,1);
+              break;
+            }
           }
-        });
+        }
         return moves;
+
+        function _getMoves(node) {
+          //var startMoveName = 'start' // don't add start to this list
+          // console.log('getMoves()')
+          var moves = [];
+          moves.push(node);
+          // console.log('node.p.list.forEach()')
+          node.p.list.forEach(function(predicate) {
+            // console.log('if pred is closed and there are links')
+            var links = predicate.getCausalLinks();
+            if (!predicate.isOpen() && predicate.hasCausalLink()) {
+              // console.log('oh yes pred was closed')
+              var move = links[0].parent;
+              // console.log('traversed to move over causal link')
+             // if (move.name !== startMoveName) {
+                // console.log('move found:')
+                // console.log(move)
+                var recurse = _getMoves(move);
+                // console.log('recurse return with length ' + recurse.length)
+                recurse.forEach(function(recurseMove) {
+                  // console.log('ok, we\'re adding ' + recurseMove.name + ' now')
+                  moves.push(recurseMove);
+                })
+            //  }
+            }
+          });
+          // console.log('returning moves')
+          return moves;          
+        }
       }
+
       function getOpen(node) {
         var open = [];
         // console.log('in getOpen(), node is')
@@ -948,7 +989,7 @@
         p2.removeCausalLink(p1);
       }
 
-      function connectMoves(m1, m2) {
+      function connectMovesBeforeToAfter(m1, m2) {
         m1.orderBefore = m2;
         m2.orderAfter = m1;
       }
