@@ -744,10 +744,10 @@
     callback(result);
 
     function popStrips(ops, members, start, plan, depth) {
-      if (depth > 12) {
+      if (depth > 20) {
         return {
           plan: plan,
-          openConditionsListIsEmpty: false
+          success: false
         }
       }
       var spacer = '';
@@ -769,10 +769,24 @@
       console.log(spacer + 'parent list')
       console.log(openParents);
       if (open.length == 0) {
-        console.log(spacer + 'empty open list; returning with plan.')
-        return {
-          plan: plan,
-          openConditionsListIsEmpty: true
+        var allStartPredicatesClosed = true;
+        start.a.list.forEach(function(pred) {
+          if (pred.isOpen()) {
+            allStartPredicatesClosed = false;
+          }
+        })
+        if (allStartPredicatesClosed) {
+          console.log(spacer + 'empty open list and start is fully connected; returning with plan and success.')
+          return {
+            plan: plan,
+            success: true
+          } 
+        } else {
+          console.log(spacer + 'empty open list but start not fully connected. returning with plan and failure.')
+          return {
+            plan: plan,
+            success: false
+          }
         }
       }
       var thisPrecondition = open[0];
@@ -808,15 +822,22 @@
         })
 
         ////////////////////////// ORDERING //////////////////////////
-        var allConnectedMoves = getMoves(plan);
-        console.log('allConnectedMoves:')
+        var allConnectedMoves = getMovesExceptThisMove(plan,thisMove);
+        console.log('allConnectedMoves not including thisMove:')
         console.log(allConnectedMoves)
+        allConnectedMoves.forEach(function(connectedMove) {
+          if (connectedMove.d.containsOne(thisMove.p)) {
+            console.log('connecting ' + thisMove.name + ' -> ' + connectedMove.name);
+            connectMovesBeforeToAfter(thisMove,connectedMove)
+          }
+        })
 
         var recurse = popStrips(ops, members, start, plan, depth + 1);
-        console.log(spacer + 'return from recurse with openConditionsListIsEmpty=' + recurse.openConditionsListIsEmpty);
-        if (recurse.openConditionsListIsEmpty) {
+        console.log(spacer + 'return from recurse with success=' + recurse.success);
+        if (recurse.success) {
           return recurse;
         }
+        console.log('FAILED. disconnect and retry')
         disconnectPredicates(thisPrecondition,connectedMovePredicate);
         // console.log('recurse back to PopTartStrips @ depth ' + depth)
         // console.log(recurse)
@@ -870,7 +891,7 @@
        *
        * @desc finds moves that are attached to the top node, not including the top. used to generate ordering.
        */
-      function getMoves(node) {
+      function getMovesExceptThisMove(node,thisMove) {
         var ignoreNames = ['goal', 'start']
         var moves = _getMoves(node);
         // OMG tried Array.prototype.filter over and over, no dice.
@@ -880,6 +901,12 @@
               moves.splice(i,1);
               break;
             }
+          }
+        }
+        for (var i = moves.length - 1; i >= 0; --i) {
+          if (thisMove === moves[i]) {
+            moves.splice(i,1);
+            break;
           }
         }
         return moves;
@@ -992,6 +1019,10 @@
       function connectMovesBeforeToAfter(m1, m2) {
         m1.orderBefore = m2;
         m2.orderAfter = m1;
+      }
+
+      function disconnectMovesBeforeToAfter(m1, m2) {
+        // disconnect
       }
     }
   }
