@@ -8,7 +8,7 @@
 
   function StripsController(result, DemonstrationService, $timeout) {
     var vm = this;
-    vm.result = deepCopy(result);
+    vm.result = result;
     vm.demo = [];
     vm.runDemonstration = runDemonstration;
     vm.resetDemonstration = resetDemonstration;

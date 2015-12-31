@@ -32,18 +32,11 @@
     function example2() {
       console.log('in StripsFactory.example2()')
       var deferred = $q.defer();
-      // runstrips(ops,members2,ex2Goal,ex2Start,ex2Goal,[],1,function(result) {
-      //   deferred.resolve({
-      //     moves: result.moves,
-      //     current: ex2Start,
-      //     goal: ex2GoalState
-      //   });
-      // });
       runPopStrips(ops, members2, ex2Start, ex2Goal, function (result) {
         $log.info('result in StripsFactory.example2()')
         $log.info(result);
         deferred.resolve({
-          result: result,
+          result: {},
           current: ex2Start,
           goal: ex2Goal
         });
@@ -54,15 +47,23 @@
     function example3() {
       var deferred = $q.defer();
       //console.log('example3()')
-      runstrips(ops, members3, ex3Goal, ex3Start, ex3Goal, [], 1, function (result) {
-        //console.log('complete with result')
-        //console.log(result)
+      // runstrips(ops, members3, ex3Goal, ex3Start, ex3Goal, [], 1, function (result) {
+      //   deferred.resolve({
+      //     moves: deepCopy(result.moves),
+      //     current: deepCopy(ex3Start),
+      //     goal: deepCopy(ex3GoalState)
+      //   });
+      // });
+      runPopStrips(ops, members3, ex3Start, ex3Goal, function (result) {
+        $log.info('result in StripsFactory.example3()')
+        $log.info(result);
+        printPlan(result);
         deferred.resolve({
-          moves: deepCopy(result.moves),
-          current: deepCopy(ex3Start),
-          goal: deepCopy(ex3GoalState)
+          result: result,
+          current: ex3Start,
+          goal: ex3Goal
         });
-      });
+      })
       return deferred.promise;
     }
 
@@ -140,8 +141,7 @@
     var members3 = [
       'A', 'B', 'C', 'D'
     ];
-
-    var ex3Start = new Statement([
+    var ex3StartState = new Statement([
       new Predicate('ontable', 'A'),
       new Predicate('ontable', 'B'),
       new Predicate('ontable', 'C'),
@@ -156,6 +156,14 @@
       new Predicate('on', 'A', 'B'),
       new Predicate('on', 'C', 'D')
     ]);
+    var ex3Start = {
+      name: 'start',
+      p: new Statement(),
+      a: ex3StartState,
+      d: new Statement(),
+      child: [],
+      causalLinks: []
+    }
     var ex3Goal = {
       name: 'goal',
       p: ex3GoalState,
@@ -215,6 +223,8 @@
     }
     /**
      * @desc identifies if a predicate on a precondition list has a causal link. should only be 1.
+     * this is still an array because i had believed i might want causalLinks to go both ways, and there are no
+     * guarantees on the number of causalLinks that can travel from start toward finish.
      */
     function hasCausalLink() {
       var numLinks = this.causalLinks.length;
@@ -229,6 +239,9 @@
       }
       if (found) {
         this.causalLinks.splice(i,1);
+        if (this.causalLinks.length == 0) {
+          this.open = true;
+        }
       }
     }
     function close () {
@@ -471,11 +484,12 @@
     function generatePopOperations(predicate,members,start) {
       var ops = [];
       var evaluateAsStatement = new Statement([predicate]);
+      //console.log('generatePopOperations from this:')
+      //console.log(evaluateAsStatement)
       for (var i = 0; i < members.length; ++i) {
         //console.log('i is ' + i + ' and members[i] is ' + members[i])
         /* one-parameter operations */
         var pickup = new Op_pickup(members[i]);
-
         if (evaluateAsStatement.containsOne(pickup.a)) {
           ops.push(pickup);
         }
@@ -517,8 +531,8 @@
           operationPredicate.parent = op;
         })       
       });
-       console.log('generatedPopOperations:')
-       console.log(ops);
+       //console.log('generatedPopOperations:')
+       //console.log(ops);
       return ops;
     }
   }
@@ -690,59 +704,84 @@
   }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   function runPopStrips(ops, members, startMove, goalMove, callback) {
-    console.log('in runPopStrips()')
+    console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ runPopStrips() TOP ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
     // set constraint start is less than goal
     // no causal links
     // goal preconditions are on the open precondition list
     var start = deepCopy(startMove)
     var goal = deepCopy(goalMove)
-    console.log('plan')
+    console.log('plan:')
     console.log(goal)
+    console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+    console.log('')
     start.constraint = 0;
     goal.constraint = 100;
     var result = popStrips(ops, members, start, goal, 1);
+    printPlan(result.plan);
     callback(result);
 
-    function printPlan(node) {
-      var header = '';
-      for (var i = 0; i < (100 - node.constraint); ++i) {
-        header += ' ';
-      }
-      header += node.name;
-      console.log(header);
-      node.p.list.forEach(function(precondition) {
-        if (!precondition.isOpen()) {
-          console.log(header + ' ' + precondition.toString() + ' --> ')
-          var recurseOn = precondition.causalLinks[0].parent;
-          // console.log('recurse on this move:')
-          // console.log(recurseOn)
-          printPlan(recurseOn);
-        }
-      })
-    }
-
     function popStrips(ops, members, start, plan, depth) {
-      if (depth > 4) {
-        return false;
+      if (depth > 12) {
+        return {
+          plan: plan,
+          openConditionsListIsEmpty: false
+        }
       }
-      console.log('~~~~~~~~~~~~~~~~~~~~~~~~in popStrips() of depth ' + depth)
+      var spacer = '';
+      for (var i = 0; i < depth; ++i) {
+        spacer += ' + '
+      }
+      console.log('~~~~~~~~~~~~~~~~~~~~~~~~ begin popStrips() of depth ' + depth + '~~~~~~~~~~~~~~~~~~~~~~~~')
       // console.log(plan)
       var open = getOpen(plan);
-      console.log('open list')
+      console.log(spacer + 'open list')
       console.log(open)
+      var openParents = {};
+      open.forEach(function(precondition) {
+        openParents[precondition.parent.name] = ''
+      })
+      open.forEach(function(precondition) {
+        openParents[precondition.parent.name] += precondition.toString() + ' ';
+      })
+      console.log(spacer + 'parent list')
+      console.log(openParents);
       if (open.length == 0) {
-        return plan;
+        console.log(spacer + 'empty open list; returning with plan.')
+        return {
+          plan: plan,
+          openConditionsListIsEmpty: true
+        }
       }
       var thisPrecondition = open[0];
       thisPrecondition.close();
+      console.log(spacer + 'closing ' + thisPrecondition.toString());
       //var preconditionAsStatement = new Statement([thisPrecondition]);  // wrapper expected in generate logic
       // TODO: handle when generateOperations is passed Predicate instead of Statement for param 1
       var possibleMoves = ops.generatePopOperations(thisPrecondition, members, start);
       // console.log('possibleMoves length is ' + possibleMoves.length)
-      
-      >>>>>> WHY IS IT NOT USING PICKUP AND PUTDOWN?
-
       removeDuplicateMoves(possibleMoves, thisPrecondition);
       //console.log(possibleMoves)
       heuristicSort(possibleMoves,start);
@@ -761,13 +800,15 @@
           if (startPredicate.isOpen()) {
             open.forEach(function(openPredicate) {
               if (startPredicate.equalTo(openPredicate)) {
+
                 connectPredicates(startPredicate,openPredicate);
               }
             })
           }
         })
         var recurse = popStrips(ops, members, start, plan, depth + 1);
-        if (recurse) {
+        console.log(spacer + 'return from recurse with openConditionsListIsEmpty=' + recurse.openConditionsListIsEmpty);
+        if (recurse.openConditionsListIsEmpty) {
           return recurse;
         }
         disconnectPredicates(thisPrecondition,connectedMovePredicate);
@@ -805,16 +846,18 @@
         })
         var openStartStatement = new Statement(openStartPredicates);
         possibles.forEach(function(move) {
-          var count = move.p.containsSome(openStartStatement);
-          // console.log('count becomes heuristic: ' + count)
-          // console.log('where containsOne is ' + move.p.containsOne(start.a) + ' and containsAll is ' + move.p.containsAll (start.a))
-          move.heuristic = count;
+          if (move.name === 'start') {
+            move.heuristic = 100;
+          } else {
+            var count = move.p.containsSome(openStartStatement);
+            move.heuristic = count;
+          }
         })
         possibles.sort(function popHeuristicSort(a,b) {
           return b.heuristic - a.heuristic;
         })
-        console.log('after heuristic sort')
-        console.log(possibles)
+        // console.log('after heuristic sort')
+        // console.log(possibles)
       }
 
       function getMoves(node) {
@@ -932,9 +975,9 @@
       // if (moves[i].x === moves[j].x && moves[i].y === moves[j].y) {
       // console.log('found matching parameters for ' + moves[i].name + ', ' + moves[j].name + ' at i,j=' + i + ', ' + j)
       if (moves[i].name === moves[j].name || moves[i].name === moves[j].oppositeName) {
-        console.log('found matching name or opposite name')
+        // console.log('found matching name or opposite name')
         //moves[j].deleteMe == true;
-        console.log('deleting i and j: ' + moves[i].name + ', ' + moves[j].name + ', and restarting search')
+        // console.log('deleting i and j: ' + moves[i].name + ', ' + moves[j].name + ', and restarting search')
         // moves.splice(j,1)
         // moves.splice(i,1)
         moves.splice(i, 2);
@@ -947,6 +990,24 @@
       }
       // }
     }
+  }
+
+  function printPlan(node) {
+    var header = '';
+    for (var i = 0; i < (100 - node.constraint); ++i) {
+      header += ' ';
+    }
+    header += node.name;
+    console.log(header);
+    node.p.list.forEach(function(precondition) {
+      if (!precondition.isOpen()) {
+        console.log(header + ' ' + precondition.toString() + ' --> ')
+        var recurseOn = precondition.causalLinks[0].parent;
+        // console.log('recurse on this move:')
+        // console.log(recurseOn)
+        printPlan(recurseOn);
+      }
+    })
   }
 
 })();
