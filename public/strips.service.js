@@ -234,14 +234,20 @@
       var found = null;
       for (var i = 0; i < this.causalLinks.length; ++i) {
         if (this.causalLinks[i].equalTo(pred)) {
+          // console.log('Predicate.removeCausalLink(), found match: ' + this.causalLinks[i].toString() + ' and ' + pred.toString())
           found = i;
         }
       }
-      if (found) {
-        this.causalLinks.splice(i,1);
+      // console.log('if we found a match, this should be a number: ' + found)
+      if (found != null) {
+        var spliced = this.causalLinks.splice(found, 1);
+        // console.log('Predicate.removeCausalLink(): removed ' + spliced.toString());
         if (this.causalLinks.length == 0) {
+          // console.log('Predicate.removeCausalLink(): setting this predicate to open')
           this.open = true;
         }
+      } else {
+        // console.log('Predicate.removeCausalLink() failed: ' + pred.toString() + ' was not found.')
       }
     }
     function close () {
@@ -383,8 +389,12 @@
       this.d = new Statement([new Predicate('clear', y), new Predicate('holding', x)]);
       this.a = new Statement([new Predicate('armempty'), new Predicate('on', x, y)]);
       this.child = [];
-      this.orderBefore = null;
-      this.orderAfter = null;
+      this.orderBeforeList = [];
+      this.orderAfterList = [];
+      this.orderBefore = orderBefore;
+      this.orderAfter = orderAfter;
+      this.removeBefore = removeBefore;
+      this.removeAfter = removeAfter;
     }
 
     function Op_unstack(x, y) {
@@ -396,8 +406,12 @@
       this.d = new Statement([new Predicate('on', x, y), new Predicate('armempty')]);
       this.a = new Statement([new Predicate('holding', x), new Predicate('clear', y)]);
       this.child = [];
-      this.orderBefore = null;
-      this.orderAfter = null;
+      this.orderBeforeList = [];
+      this.orderAfterList = [];
+      this.orderBefore = orderBefore;
+      this.orderAfter = orderAfter;
+      this.removeBefore = removeBefore;
+      this.removeAfter = removeAfter;
     }
 
     function Op_pickup(x) {
@@ -409,8 +423,12 @@
       this.d = new Statement([new Predicate('ontable', x), new Predicate('armempty')]);
       this.a = new Statement([new Predicate('holding', x)]);
       this.child = [];
-      this.orderBefore = null;
-      this.orderAfter = null;
+      this.orderBeforeList = [];
+      this.orderAfterList = [];
+      this.orderBefore = orderBefore;
+      this.orderAfter = orderAfter;
+      this.removeBefore = removeBefore;
+      this.removeAfter = removeAfter;
     }
 
     function Op_putdown(x) {
@@ -422,10 +440,52 @@
       this.d = new Statement([new Predicate('holding', x)]);
       this.a = new Statement([new Predicate('ontable', x), new Predicate('armempty')]);
       this.child = [];
-      this.orderBefore = null;
-      this.orderAfter = null;
+      this.orderBeforeList = [];
+      this.orderAfterList = [];
+      this.orderBefore = orderBefore;
+      this.orderAfter = orderAfter;
+      this.removeBefore = removeBefore;
+      this.removeAfter = removeAfter;
     }
 
+    function orderBefore(move) {
+      this.orderBeforeList.push(move);
+      ///////// DEBUG //////////
+      var found = false;
+      this.orderBeforeList.forEach(function(link) {
+        if (move === link) {
+          // console.log('Move.orderBefore() success')
+          found = true;
+        }
+      })
+      if (!found) {
+        // console.log('Move.orderBefore() failure')
+      }
+    }
+
+    function orderAfter(move) {
+       this.orderAfterList.push(move);
+    }
+
+    function removeBefore(move) {
+      for (var i = 0; i < this.orderBeforeList.length; ++i) {
+        if (move === this.orderBeforeList[i]) {
+          // console.log('Move.removeBefore(): ' + move.name + ' and ' + this.orderBeforeList[i].name + ' match found')
+          var spliced = this.orderBeforeList.splice(i,1);
+          // console.log('Move.removeBefore() success at removing ' + spliced[0].name)
+        }
+      }
+    }
+
+    function removeAfter(move) {
+      for (var i = 0; i < this.orderAfterList.length; ++i) {
+        if (move === this.orderAfterList[i]) {
+          // console.log('Move.removeAfter(): ' + move.name + ' and ' + this.orderAfterList[i].name + ' match found')
+          var spliced = this.orderAfterList.splice(i,1);
+          // console.log('Move.removeAfter() success at removing ' + spliced[0].name)
+        }
+      }
+    }
 
     /**
      *
@@ -727,6 +787,12 @@
 
 
   function runPopStrips(ops, members, startMove, goalMove, callback) {
+    // ------ config ------
+    // one little bit of config here
+    // put names (name attribute) of the start and goal actions here
+    // and any other moves you don't want to connect to the plan for whatever reason
+    // index 0 reserved for start, 1 reserved for goal
+    var ignoreNames = ['start', 'goal']; 
     console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ runPopStrips() TOP ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
     // set constraint start is less than goal
     // no causal links
@@ -738,36 +804,31 @@
     console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
     console.log('')
     start.constraint = 0;
+    // hijacked. v2 should set a parent attribute for all predicates that are part of actions.
+    start.a.list.forEach(function(pred) {
+      pred.parent = start;
+    })
     goal.constraint = 100;
     var result = popStrips(ops, members, start, goal, 1);
     printPlan(result.plan);
     callback(result);
 
     function popStrips(ops, members, start, plan, depth) {
+      console.log('~~~~~~~~~~~~~~~~~~~~~~~~ begin popStrips() of depth ' + depth + '~~~~~~~~~~~~~~~~~~~~~~~~')
+      var spacer = '';
+      for (var i = 0; i < depth; ++i) {
+        spacer += ' + '
+      }
       if (depth > 20) {
+        console.log(spacer + 'past max depth, returning false')
         return {
           plan: plan,
           success: false
         }
       }
-      var spacer = '';
-      for (var i = 0; i < depth; ++i) {
-        spacer += ' + '
-      }
-      console.log('~~~~~~~~~~~~~~~~~~~~~~~~ begin popStrips() of depth ' + depth + '~~~~~~~~~~~~~~~~~~~~~~~~')
-      // console.log(plan)
       var open = getOpen(plan);
       console.log(spacer + 'open list')
       console.log(open)
-      var openParents = {};
-      open.forEach(function(precondition) {
-        openParents[precondition.parent.name] = ''
-      })
-      open.forEach(function(precondition) {
-        openParents[precondition.parent.name] += precondition.toString() + ' ';
-      })
-      console.log(spacer + 'parent list')
-      console.log(openParents);
       if (open.length == 0) {
         var allStartPredicatesClosed = true;
         start.a.list.forEach(function(pred) {
@@ -790,24 +851,39 @@
         }
       }
       var thisPrecondition = open[0];
-      thisPrecondition.close();
-      console.log(spacer + 'closing ' + thisPrecondition.toString());
-      //var preconditionAsStatement = new Statement([thisPrecondition]);  // wrapper expected in generate logic
-      // TODO: handle when generateOperations is passed Predicate instead of Statement for param 1
+
       var possibleMoves = ops.generatePopOperations(thisPrecondition, members, start);
-      // console.log('possibleMoves length is ' + possibleMoves.length)
+      var debugPossibleMoves = [];
+      possibleMoves.forEach(function(poss) {
+        debugPossibleMoves.push(poss.name)
+      })
+      console.log(spacer + 'possible moves from generatePopOperations')
+      console.log(debugPossibleMoves)
+
       removeDuplicateMoves(possibleMoves, thisPrecondition);
-      //console.log(possibleMoves)
+      ignoreMoves(possibleMoves)
       heuristicSort(possibleMoves,start);
+
+      debugPossibleMoves = [];
+      possibleMoves.forEach(function(poss) {
+        debugPossibleMoves.push(poss.name)
+      })
+      console.log(spacer + 'possible moves after removing duplicates, ignoreMoves and after heuristicSort')
+      console.log(debugPossibleMoves)
+      console.log(spacer + 'about to apply one of ' + possibleMoves.length + ' moves')
+
       ////////////////////////////// APPLY MOVE //////////////////////////////
       for (var i = 0; i < possibleMoves.length; ++i) {
         // pick i'th move and run with it
         var thisMove = possibleMoves[i];
+        console.log(spacer + 'chose ' + thisMove.name + ' to solve for ' + thisPrecondition.toString())
         // console.log('thisMove')
         // console.log(thisMove);
         // connect chosen move precondition to this closed precondition
         var connectedMovePredicate = findMatchingPredicateIn(thisPrecondition, thisMove.a.list);
         connectPredicates(thisPrecondition,connectedMovePredicate);
+        // now the open list should include the predicates from the recently added move. update our open list.
+        open = getOpen(plan);
         // set constraint: move.constraint = parent-of-precondition-constraint - 1
         thisMove.constraint = thisPrecondition.parent.constraint - 1;
         // connect any predicates on the open list to the start.a.list if we can
@@ -815,7 +891,9 @@
           if (startPredicate.isOpen()) {
             open.forEach(function(openPredicate) {
               if (startPredicate.equalTo(openPredicate)) {
+                console.log(spacer + 'connecting ' + startPredicate.toString() + ' to ' + openPredicate.toString() + ' because the new move made it available')
                 connectPredicates(startPredicate,openPredicate);
+                console.log(spacer + 'done connecting this predicate to the start add list predicate')
               }
             })
           }
@@ -823,28 +901,52 @@
 
         ////////////////////////// ORDERING //////////////////////////
         var allConnectedMoves = getMovesExceptThisMove(plan,thisMove);
-        console.log('allConnectedMoves not including thisMove:')
+        console.log(spacer + 'ORDERING: allConnectedMoves not including thisMove:')
         console.log(allConnectedMoves)
+        var movesConnectedTo = [];
         allConnectedMoves.forEach(function(connectedMove) {
           if (connectedMove.d.containsOne(thisMove.p)) {
-            console.log('connecting ' + thisMove.name + ' -> ' + connectedMove.name);
+            console.log(spacer + 'connecting ' + thisMove.name + ' -> ' + connectedMove.name);
             connectMovesBeforeToAfter(thisMove,connectedMove)
+            movesConnectedTo.push(connectedMove)
           }
         })
+
+        ///////////////////////// PRE-RECURSE DEBUG ////////////////////
+        console.log(spacer + 'about to recurse. here is the plan at this point:')
+        printPlan(plan);
+        var debugOpenList = {};
+        open.forEach(function(precondition) {
+          debugOpenList[precondition.parent.name] = ''
+        })
+        open.forEach(function(precondition) {
+          debugOpenList[precondition.parent.name] += precondition.toString() + ' ';
+        })
+        console.log(spacer + 'actions with open predicates')
+        console.log(debugOpenList);
+
 
         var recurse = popStrips(ops, members, start, plan, depth + 1);
         console.log(spacer + 'return from recurse with success=' + recurse.success);
         if (recurse.success) {
           return recurse;
         }
-        console.log('FAILED. disconnect and retry')
+        console.log(spacer + 'FAILED. disconnect ' + thisMove.name + ' and retry')
+        console.log(movesConnectedTo)
         disconnectPredicates(thisPrecondition,connectedMovePredicate);
-        // console.log('recurse back to PopTartStrips @ depth ' + depth)
-        // console.log(recurse)
-        // if (noConflicts) {
-        //   return true;
-        // }
-        //printPlan(plan);
+        movesConnectedTo.forEach(function(connectedMove) {
+          console.log(spacer + 'disconnecting ' + thisMove.name + ' -x ' + connectedMove.name);
+          disconnectMovesBeforeToAfter(thisMove,connectedMove);
+        })
+        console.log(spacer + 'the two formerly associated preconditions should be open')
+        console.log(spacer + 'thisPrecondition open? ' + thisPrecondition.isOpen());
+        console.log(spacer + 'connectedMovePredicate open? ' + connectedMovePredicate.isOpen());
+      }
+
+      console.log(spacer + 'got to end of possibleMoves list, returning failure')
+      return {
+        plan: plan,
+        success: false
       }
 
       function removeDuplicateMoves (possibleMoves, thisPrecondition) {
@@ -862,15 +964,31 @@
         }
       }
 
+      function ignoreMoves (possibles) {
+        // ignoreNames comes from runPopStrips() as a config
+        for (var i = possibles.length - 1; i >= 0; --i) {
+          for (var j = 0; j < ignoreNames.length; ++j) {
+            if (possibles[i].name === ignoreNames[j]) {
+              var spliced = possibles.splice(i,1);
+              // console.log('ignoreMoves(): removing ' + spliced[0].name + ' because it is in the list of ignoreNames')
+              break;
+            }
+          }
+        }
+      }
+
       function heuristicSort (possibles,start) {
         // for each possible move,
         //   better moves have preconditions that match the start state's a.list predicates
         // so, given the start state and the list possibleMoves, assign value based on
         //  # of matches between predicates
+        // console.log('heuristicSort()')
         var openStartPredicates = start.a.list.filter(function removeClosed(predicate) {
-          // console.log('checking if this is true to keep this one: ' + predicate.isOpen());
+          // console.log('is ' + predicate.toString() + ' an open predicate? ' + predicate.isOpen());
           return predicate.isOpen();
         })
+        // console.log('result of filtering by open status:')
+        // console.log(openStartPredicates)
         var openStartStatement = new Statement(openStartPredicates);
         possibles.forEach(function(move) {
           if (move.name === 'start') {
@@ -892,8 +1010,9 @@
        * @desc finds moves that are attached to the top node, not including the top. used to generate ordering.
        */
       function getMovesExceptThisMove(node,thisMove) {
-        var ignoreNames = ['goal', 'start']
+        // ignoreNames comes from runPopStrips()
         var moves = _getMoves(node);
+        // console.log('hey im free')
         // OMG tried Array.prototype.filter over and over, no dice.
         for (var i = moves.length - 1; i >= 0; --i) {
           for (var j = 0; j < ignoreNames.length; ++j) {
@@ -913,27 +1032,33 @@
 
         function _getMoves(node) {
           //var startMoveName = 'start' // don't add start to this list
-          // console.log('getMoves()')
+          // console.log('_getMoves()')
+          // console.log('performing operation on ' + node.name)
           var moves = [];
           moves.push(node);
-          // console.log('node.p.list.forEach()')
+          // console.log('node.p.list.forEach()')          
           node.p.list.forEach(function(predicate) {
             // console.log('if pred is closed and there are links')
             var links = predicate.getCausalLinks();
             if (!predicate.isOpen() && predicate.hasCausalLink()) {
               // console.log('oh yes pred was closed')
               var move = links[0].parent;
-              // console.log('traversed to move over causal link')
-             // if (move.name !== startMoveName) {
-                // console.log('move found:')
-                // console.log(move)
+              // console.log('at predicate parent aka destination move')
+              // console.log(move);
+              // if (move.name !== startMoveName) {
+              // console.log('move found:')
+              // console.log(move)
+              // console.log('testing if ' + move.name + ' !== ' + ignoreNames[0] + ': ' + (move.name !== ignoreNames[0]))
+              if (move.name !== ignoreNames[0]) {
                 var recurse = _getMoves(move);
                 // console.log('recurse return with length ' + recurse.length)
                 recurse.forEach(function(recurseMove) {
                   // console.log('ok, we\'re adding ' + recurseMove.name + ' now')
                   moves.push(recurseMove);
                 })
-            //  }
+              } else {
+                // console.log('whoa buddy, ' + move.name + ' has the name of the start action which _getMoves() ignores')
+              }
             }
           });
           // console.log('returning moves')
@@ -1002,7 +1127,8 @@
           p1.setCausalLink(p2);
           p2.setCausalLink(p1);          
         }
-        // console.log('causal links set')
+        // console.log('connectPredicates(): connecting ' + p1.toString() + ' to ' + p2.toString() + '?')
+        // console.log('connectPredicates(): ' + p1.toString() + ' links: ' + p1.getCausalLinks().length + ', ' + p2.toString() + ' links: ' + p2.getCausalLinks().length)
         // console.log(p1)
         // console.log(p2)
       }
@@ -1010,19 +1136,22 @@
       function disconnectPredicates(p1, p2) {
         // console.log('these two were previously linked together')
         // console.log('p1 had ' + p1.causalLinks.length + ' links and p2 had ' + p2.causalLinks.length + ' links')
-        // console.log(p1)
-        // console.log(p2)
+        // console.log('and p1.isOpen() ' + p1.isOpen() + ' and p2.isOpen() ' + p2.isOpen());
         p1.removeCausalLink(p2);
         p2.removeCausalLink(p1);
+        // console.log('now p1 has ' + p1.causalLinks.length + ' links and p2 has ' + p2.causalLinks.length + ' links')
+        // console.log('and p1.isOpen() ' + p1.isOpen() + ' and p2.isOpen() ' + p2.isOpen());
       }
 
       function connectMovesBeforeToAfter(m1, m2) {
-        m1.orderBefore = m2;
-        m2.orderAfter = m1;
+        m1.orderBefore(m2);
+        m2.orderAfter(m1);
       }
 
       function disconnectMovesBeforeToAfter(m1, m2) {
-        // disconnect
+        m1.removeBefore(m2);
+        m2.removeAfter(m1);
+        // console.log('done disconnecting moves')
       }
     }
   }
@@ -1064,22 +1193,80 @@
     }
   }
 
+  /**
+   *
+   * @desc finds moves that are attached to the top node, not including the top. used to generate ordering.
+   */
   function printPlan(node) {
-    var header = '';
-    for (var i = 0; i < (100 - node.constraint); ++i) {
-      header += ' ';
-    }
-    header += node.name;
-    console.log(header);
-    node.p.list.forEach(function(precondition) {
-      if (!precondition.isOpen()) {
-        console.log(header + ' ' + precondition.toString() + ' --> ')
-        var recurseOn = precondition.causalLinks[0].parent;
-        // console.log('recurse on this move:')
-        // console.log(recurseOn)
-        printPlan(recurseOn);
+    console.log('~~~~~CURRENT PLAN~~~~~')
+    var ignoreNames = ['goal', 'start']
+    var moves = _getMoves(node);
+    // OMG tried Array.prototype.filter over and over, no dice.
+    for (var i = moves.length - 1; i >= 0; --i) {
+      for (var j = 0; j < ignoreNames.length; ++j) {
+        if (moves[i].name === ignoreNames[j]) {
+          moves.splice(i,1);
+          break;
+        }
       }
+    }
+    
+    moves.forEach(function(move) {
+      var comesBefore = [];
+      move.orderBeforeList.forEach(function(link) {
+        comesBefore.push(link.name)
+      })
+      console.log(move.name + ': comes before ' + JSON.stringify(comesBefore));
     })
+
+    console.log('~~~~~~~~~~~~~~~~~~~~~~')
+
+    function _getMoves(node) {
+      //var startMoveName = 'start' // don't add start to this list
+      // console.log('getMoves()')
+      var moves = [];
+      moves.push(node);
+      // console.log('node.p.list.forEach()')
+      node.p.list.forEach(function(predicate) {
+        // console.log('if pred is closed and there are links')
+        var links = predicate.getCausalLinks();
+        if (!predicate.isOpen() && predicate.hasCausalLink()) {
+          // console.log('oh yes pred was closed')
+          var move = links[0].parent;
+          // console.log('traversed to move over causal link')
+         // if (move.name !== startMoveName) {
+            // console.log('move found:')
+            // console.log(move)
+            var recurse = _getMoves(move);
+            // console.log('recurse return with length ' + recurse.length)
+            recurse.forEach(function(recurseMove) {
+              // console.log('ok, we\'re adding ' + recurseMove.name + ' now')
+              moves.push(recurseMove);
+            })
+        //  }
+        }
+      });
+      // console.log('returning moves')
+      return moves;          
+    }
   }
+  
+  // function printPlan(node) {
+  //   var header = '';
+  //   for (var i = 0; i < (100 - node.constraint); ++i) {
+  //     header += ' ';
+  //   }
+  //   header += node.name;
+  //   console.log(header);
+  //   node.p.list.forEach(function(precondition) {
+  //     if (!precondition.isOpen()) {
+  //       console.log(header + ' ' + precondition.toString() + ' --> ')
+  //       var recurseOn = precondition.causalLinks[0].parent;
+  //       // console.log('recurse on this move:')
+  //       // console.log(recurseOn)
+  //       printPlan(recurseOn);
+  //     }
+  //   })
+  // }
 
 })();
