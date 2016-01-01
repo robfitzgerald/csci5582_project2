@@ -101,24 +101,12 @@
       new Predicate('clear', 'C'),
       new Predicate('ontable', 'A'),
       new Predicate('ontable', 'B'),
-      // new Predicate('clear', 'A'),
-      // new Predicate('ontable', 'C')
-     new Predicate('on', 'C', 'A')
+      new Predicate('on', 'C', 'A')
     ]);
     var ex2GoalState = new Statement([
       new Predicate('on', 'A', 'B'),
       new Predicate('on', 'B', 'C')
     ]);
-
-    // var ex2Start = {
-    //   name: 'start',
-    //   p: new Statement(),
-    //   a: ex2StartState,
-    //   d: new Statement(),
-    //   child: [],
-    //   causalLinks: []
-    // }
-
     var ex2Goal = {
       name: 'goal',
       p: ex2GoalState,
@@ -146,14 +134,6 @@
       new Predicate('on', 'A', 'B'),
       new Predicate('on', 'C', 'D')
     ]);
-    // var ex3Start = {
-    //   name: 'start',
-    //   p: new Statement(),
-    //   a: ex3StartState,
-    //   d: new Statement(),
-    //   child: [],
-    //   causalLinks: []
-    // }
     var ex3Goal = {
       name: 'goal',
       p: ex3GoalState,
@@ -492,16 +472,8 @@
     function generateOperations(currentSingle, currentState, members, depth) {
       var ops = [];
       for (var i = 0; i < members.length; ++i) {
-        //console.log('i is ' + i + ' and members[i] is ' + members[i])
         /* one-parameter operations */
         var pickup = new Op_pickup(members[i]);
-        //console.log('new Op_pickup(), currentSingle, currentState')
-        //console.log(pickup)
-        //console.log(currentSingle)
-        //console.log(currentState)
-
-        //console.log('(currentSingle.containsOne(pickup.a) && currentState.containsAll(pickup.p)): ' + (currentSingle.containsOne(pickup.a) && currentState.containsAll(pickup.p)))
-
         if (currentSingle.containsOne(pickup.a)/* && currentState.containsAll(pickup.p)*/) {
           ops.push(pickup);
         }
@@ -511,7 +483,6 @@
         }
 
         for (var j = 0; j < members.length; j++) {
-          //console.log('j is ' + i + ' and members[i] is ' + members[i])
           if (i == j) {
             // do nothing
           } else {
@@ -528,24 +499,18 @@
         }
       }
       ops.forEach(function (op) {
-        //op.currentState = currentState.toString();
         op.depth = depth;
       })
-      // console.log('generatedOperations:')
-      // console.log(ops);
       return ops;
     }
 
     function generateBlocksSubGoal(members) {
-      // console.log('generateBlocksSubGoal')
       var predicates = [];
       members.forEach(function(block) {
         predicates.push(new Predicate('ontable', block));
         predicates.push(new Predicate('clear', block));
       })
       predicates.push(new Predicate('armempty'))
-      // console.log('returning with')
-      // console.log(JSON.stringify(predicates))
       return {
         name: 'goal',
         p: new Statement(predicates),
@@ -559,10 +524,7 @@
     function generatePopOperations(predicate,members,start) {
       var ops = [];
       var evaluateAsStatement = new Statement([predicate]);
-      //console.log('generatePopOperations from this:')
-      //console.log(evaluateAsStatement)
       for (var i = 0; i < members.length; ++i) {
-        //console.log('i is ' + i + ' and members[i] is ' + members[i])
         /* one-parameter operations */
         var pickup = new Op_pickup(members[i]);
         if (evaluateAsStatement.containsOne(pickup.a)) {
@@ -574,7 +536,6 @@
         }
 
         for (var j = 0; j < members.length; j++) {
-          //console.log('j is ' + i + ' and members[i] is ' + members[i])
           if (i == j) {
             // do nothing
           } else {
@@ -590,24 +551,17 @@
           }
         }
       }
-      //console.log('done iterative.')
       if (evaluateAsStatement.containsOne(start.a)) {
         ops.push(start);
       }
-      //console.log('done checking start.')
       ops.forEach(function (op) {
-        //console.log('forEach: ' + op.name)
         op.p.list.map(function(operationPredicate) {
-          //console.log('map: ' + operationPredicate.toString());
           operationPredicate.parent = op;
         })
         op.a.list.map(function(operationPredicate) {
-          //console.log('map: ' + operationPredicate.toString());
           operationPredicate.parent = op;
         })       
       });
-       //console.log('generatedPopOperations:')
-       //console.log(ops);
       return ops;
     }
   }
@@ -630,7 +584,6 @@
         validBranch: false
       }
     }
-    // console.log('starts')
     // var newStripsLog = "";
     // for (var i = 0; i < depth; ++i) {
     //  newStripsLog += "~|";
@@ -640,7 +593,6 @@
     var stack = move.p.expand();
 
     for (var i = stack.length - 1; i >= 0; --i) {
-      // console.log('loop stack')     
       // FINAL STEP: if all of the preconditions for a move are present in the current state, then apply move
       // else, this was not a valid branch.
       if (i == 0) {
@@ -650,8 +602,6 @@
             current.deleteStatement(move.d);
             current.addStatement(move.a);
           }
-          // console.log('return valid')
-
           return {
             validBranch: true,
             current: deepCopy(current),
@@ -669,19 +619,12 @@
         // HARD STEP: this precondition isn't a match, so, generate possible moves and recurse.
       } else {
         var possibleMoves = ops.generateOperations(stack[i], current, members, depth);
-        // if (modified && (triedMoves.length > 0)) {
-          // console.log('applying sussman heuristic')
-        //   sussmanHeuristic(possibleMoves, triedMoves);
-        // }
-        // console.log('possibles generated')
         stripsHeuristic(possibleMoves, current, goal.p, modified, triedMoves);
-        // console.log('heuristic applied')
         for (var j = possibleMoves.length - 1; j >= 0; --j) {
           var recurseMove = deepCopy(possibleMoves[j]);
           var recurseCurrent = deepCopy(current);
           triedMoves.push(recurseMove);
           var recurseTriedMoves = deepCopy(triedMoves);
-          // console.log('getting ready to recurse')
           var recurse = strips(ops, members, recurseMove, recurseCurrent, goal, recurseTriedMoves, (depth + 1), modified);
           if (recurse.validBranch) {
             // console.log('recurse came back valid!')
@@ -706,39 +649,6 @@
       }
     }
   }
-
-  function sussmanHeuristic (possibleMoves, triedMoves) {
-
-  }
-
-  // function sussmanHeuristic (possibleMoves, triedMoves) {
-  //   // console.log('getting recent info')
-  //   var mostRecentMoveID = triedMoves[triedMoves.length - 1].id.substring(0,3);
-  //   var mostRecentBlock = triedMoves[triedMoves.length - 1].x;
-  //   // console.log('has recent info')
-  //   var stackMatch = 'st' + mostRecentBlock;
-  //   var pickupMatch = 'pi' + mostRecentBlock;
-  //   var generatedStackMatch = possibleMoves.find(function(el,ind,arr) {
-  //     return el.id.substring(0,3) === stackMatch;
-  //   })
-  //   var generatedPickupMatch = possibleMoves.find(function(el,ind,arr) {
-  //     return el.id.substring(0,3) === pickupMatch;
-  //   })
-
-  //   if (generatedStackMatch !== undefined) {
-  //     // console.log('APPLY heuristic to ' + generatedStackMatch.name)
-  //     generatedStackMatch.heuristic = 100;
-  //   } else {
-  //     // console.log('stack match not found for ' + mostRecentMoveID)
-  //   }
-  //   if (generatedPickupMatch !== undefined) {
-  //     // console.log('APPLY heuristic to ' + generatedPickupMatch.name)
-  //     generatedPickupMatch.heuristic = 100;
-  //   } else {
-  //     // console.log('pickup match not found for ' + mostRecentMoveID)
-  //   }
-  //   // console.log('about to hitcha with more console')
-  // }
 
   function stripsHeuristic(possibleMoves, thisCurrent, goal, modified, triedMoves) {
     for (var j = possibleMoves.length - 1; j >= 0; --j) {
@@ -767,37 +677,6 @@
         possibleMoves[j].heuristic += 0;
       }
     }
-    // for (var j = possibleMoves.length-1; j >= 0; --j) {
-    //   if (possibleMoves[j].heuristic == 0) {
-    //     possibleMoves.splice(j,1);
-    //   }
-    // }
-
-    // console.log('stripsHeuristic(): before modified section')
-    // if (modified && (triedMoves.length > 0)) {
-    //   // sussman modification
-    //   // construct the id for a move which we would want to be certain to do next for sussman
-    //   // because we want to encourage all blocks to begin onTable()
-    //   console.log('getting recent info')
-    //   var mostRecentMoveID = triedMoves[triedMoves.length - 1].id;
-    //   var mostRecentBlock = triedMoves[triedMoves.length - 1].x;
-    //   console.log('has recent info')
-    //   var stackMatch = 'st' + mostRecentBlock;
-    //   var pickupMatch = 'pi' + mostRecentBlock;
-    //   console.log('about to hitcha with more console')
-    //   console.log(mostRecentMoveID + ' === ' + stackMatch + '? ' + (mostRecentMoveID === stackMatch))
-    //   console.log(mostRecentMoveID + ' === ' + pickupMatch + '? ' + (mostRecentMoveID === pickupMatch))
-
-    //   if (mostRecentMoveID === stackMatch) {
-    //     var found = possibleMoves.find(function(element, index, array) {
-    //       return (element.id === stackMatch)
-    //     })
-    //     console.log(found.id + ' was found, looking for ' + stackMatch)
-    //   }
-    //   //  if triedMoves.top() is of the stack(x,y) variety, then select pickup(x) move.
-    //   //  if triedMoves.top() is one of the pickup(x) move, and unstack(x,y) is available, then choose it.
-    // }
-    // console.log('stripsHeuristic(): after modified section')
 
     // sort ascending, since we will move through array in descending order, and higher numbers are better
     possibleMoves.sort(function moveHeuristicSort(a, b) {
@@ -833,32 +712,16 @@
   }
 
   function runstrips(ops, members, move, current, goal, thisPlan, depth, modified, callback) {
-    // console.log('solving the blocks world problem with this pair of start and goal states')
-    // console.log(deepCopy(current))
-    // console.log(deepCopy(goal))
-    // console.log('modified = ' + modified)
     var result = null;
     if (modified) {
-      // stripsSubGoal(ops, members, move, current, goal, thisPlan, depth, function(sub) {
-      //   console.log('callback of sub.')
-      //   console.log(sub)
-      // })
-      //  called as runstrips(ops, members1, ex1Goal, ex1StartState, ex1Goal, [], 1, false, function (result)
-      //  sig for strips(ops, members, move, current, goal, triedMoves, depth, modified)
-      // console.log('modified strips')
       var subGoal = ops.generateBlocksSubGoal(members);
-      // console.log('between generateBlocks calls')
       var subGoalState = ops.generateBlocksSubGoal(members);
       subGoalState = subGoalState.p;
-      // console.log(subGoalState);
       var stageTwo = strips(ops, members, move, subGoalState, goal, [], depth, modified);
-      // console.log(stageTwo)
       var stageOne = strips(ops, members, subGoal, current, subGoal, [], depth, modified);
-      // console.log(stageOne)
       var combinedResult = [];
       findMoves(stageOne.thisMove, combinedResult);
       findMoves(stageTwo.thisMove, combinedResult);
-      // console.log(JSON.stringify(combinedResult))
       result = {
         thisMove: goal,
         moves: combinedResult,
@@ -866,15 +729,12 @@
         validBranch: true
       }
     } else {
-      // console.log('regular strips')
       result = strips(ops, members, move, current, goal, thisPlan, depth, modified);
       result.moves = [];
       findMoves(result.thisMove, result.moves);
       delete result.triedMoves;
     }
     deleteOpposites(result.moves);
-    // console.log('--DONE--   calling callback with this result object')
-    // console.log(deepCopy(result));
     callback(result);
   }
 

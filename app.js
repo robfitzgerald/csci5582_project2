@@ -10,7 +10,7 @@
 		console.log('sending project2.html')
 		res.sendFile(PROJECT_ROOT + '/public/project2.html');
 	});
-	console.log('serving site at localhost:3000')
-	app.listen(3000);
+	console.log('serving site at localhost:80')
+	app.listen(80);
 
 })();
