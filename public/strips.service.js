@@ -19,7 +19,7 @@
 
     function example1() {
       var deferred = $q.defer();
-      runstrips(ops, members1, ex1Goal, ex1Start, ex1Goal, [], 1, function (result) {
+      runstrips(ops, members1, ex1Goal, ex1Start, ex1Goal, [], 1, false, function (result) {
         deferred.resolve({
           moves: result.moves,
           current: ex1Start,
@@ -46,24 +46,24 @@
 
     function example3() {
       var deferred = $q.defer();
-      //console.log('example3()')
-      // runstrips(ops, members3, ex3Goal, ex3Start, ex3Goal, [], 1, function (result) {
-      //   deferred.resolve({
-      //     moves: deepCopy(result.moves),
-      //     current: deepCopy(ex3Start),
-      //     goal: deepCopy(ex3GoalState)
-      //   });
-      // });
-      runPopStrips(ops, members3, ex3Start, ex3Goal, function (result) {
-        $log.info('result in StripsFactory.example3()')
-        $log.info(result);
-        printPlan(result);
+      console.log('example3()')
+      runstrips(ops, members3, ex3Goal, ex3StartState, ex3Goal, [], 1, false, function (result) {
         deferred.resolve({
-          result: result,
-          current: ex3Start,
-          goal: ex3Goal
+          moves: deepCopy(result.moves),
+          current: deepCopy(ex3StartState),
+          goal: deepCopy(ex3GoalState)
         });
-      })
+      });
+      // runPopStrips(ops, members3, ex3Start, ex3Goal, function (result) {
+      //   $log.info('result in StripsFactory.example3()')
+      //   $log.info(result);
+      //   printPlan(result);
+      //   deferred.resolve({
+      //     result: result,
+      //     current: ex3Start,
+      //     goal: ex3Goal
+      //   });
+      // })
       return deferred.promise;
     }
 
@@ -108,7 +108,7 @@
     ];
 
     var ex2StartState = new Statement([
-      new Predicate('armempty'),
+      // new Predicate('armempty'),
       new Predicate('clear', 'B'),
       new Predicate('clear', 'C'),
       new Predicate('ontable', 'A'),
@@ -384,6 +384,7 @@
       this.x = x;
       this.y = y;
       this.name = 'stack(' + x + ',' + y + ')';
+      this.id = 'st' + x + y;
       this.oppositeName = 'unstack(' + x + ',' + y + ')';
       this.p = new Statement([new Predicate('clear', y), new Predicate('holding', x)]);
       this.d = new Statement([new Predicate('clear', y), new Predicate('holding', x)]);
@@ -401,6 +402,7 @@
       this.x = x;
       this.y = y;
       this.name = 'unstack(' + x + ',' + y + ')';
+      this.id = 'un' + x + y;
       this.oppositeName = 'stack(' + x + ',' + y + ')';
       this.p = new Statement([new Predicate('on', x, y), new Predicate('clear', x), new Predicate('armempty')]);
       this.d = new Statement([new Predicate('on', x, y), new Predicate('armempty')]);
@@ -418,6 +420,7 @@
       this.x = x;
       this.y = null;
       this.name = 'pickup(' + x + ')';
+      this.id = 'pi' + x
       this.oppositeName = 'putdown(' + x + ')';
       this.p = new Statement([new Predicate('clear', x), new Predicate('ontable', x), new Predicate('armempty')]);
       this.d = new Statement([new Predicate('ontable', x), new Predicate('armempty')]);
@@ -435,6 +438,7 @@
       this.x = x;
       this.y = null;
       this.name = 'putdown(' + x + ')';
+      this.id = 'pu' + x;
       this.oppositeName = 'pickup(' + x + ')';
       this.p = new Statement([new Predicate('holding', x)]);
       this.d = new Statement([new Predicate('holding', x)]);
@@ -609,18 +613,18 @@
    * @param {int} depth - track recursion depth
    * @returns {boolean}
    */
-  function strips(ops, members, move, current, goal, triedMoves, depth, parentMovePtr) {
+  function strips(ops, members, move, current, goal, triedMoves, depth, modified) {
     if (depth > 6) {
       return {
         validBranch: false
       }
     }
-    //var newStripsLog = "";
-    //for (var i = 0; i < depth; ++i) {
+    // var newStripsLog = "";
+    // for (var i = 0; i < depth; ++i) {
     //  newStripsLog += "~|";
-    //}
-    //newStripsLog += '~ strips() with move ' + move.name;
-    //console.log(newStripsLog);
+    // }
+    // newStripsLog += '~ strips() with move ' + move.name;
+    // console.log(newStripsLog);
     var stack = move.p.expand();
     for (var i = stack.length - 1; i >= 0; --i) {
       // FINAL STEP: if all of the preconditions for a move are present in the current state, then apply move
@@ -649,22 +653,22 @@
         // HARD STEP: this precondition isn't a match, so, generate possible moves and recurse.
       } else {
         var possibleMoves = ops.generateOperations(stack[i], current, members, depth);
-        // stripsHeuristic(possibleMoves,current,goal.p);
+        stripsHeuristic(possibleMoves, current, goal.p, modified, triedMoves);
         for (var j = possibleMoves.length - 1; j >= 0; --j) {
           var recurseMove = deepCopy(possibleMoves[j]);
           var recurseCurrent = deepCopy(current);
           triedMoves.push(recurseMove);
           var recurseTriedMoves = deepCopy(triedMoves);
-          var recurse = strips(ops, members, recurseMove, recurseCurrent, goal, recurseTriedMoves, (depth + 1), move);
+          var recurse = strips(ops, members, recurseMove, recurseCurrent, goal, recurseTriedMoves, (depth + 1), modified);
           if (recurse.validBranch) {
-            //var tree = "";
-            //for (var i = 0; i < depth; ++i) {
+            // var tree = "";
+            // for (var i = 0; i < depth; ++i) {
             //  tree += " ";
-            //}
-            //tree += recurseMove.name;
-            //tree += "               | depth= " + depth + ", stripsHeuristic= " + recurseMove.stripsHeuristic;
-            //tree += " triedMoves.length= " + triedMoves.length;
-            //console.log(tree);
+            // }
+            // tree += recurseMove.name;
+            // tree += "               | depth= " + depth + ", stripsHeuristic= " + recurseMove.stripsHeuristic;
+            // tree += " triedMoves.length= " + triedMoves.length;
+            // console.log(tree);
             triedMoves = deepCopy(recurse.triedMoves);
             current = deepCopy(recurse.current);
             move.child.push(deepCopy(recurse.thisMove));
@@ -679,7 +683,7 @@
     }
   }
 
-  function stripsHeuristic(possibleMoves, thisCurrent, goal) {
+  function stripsHeuristic(possibleMoves, thisCurrent, goal, modified, triedMoves) {
     for (var j = possibleMoves.length - 1; j >= 0; --j) {
       if (goal.containsOne(possibleMoves[j].a)) {
         if (goal.containsAll(possibleMoves[j].a)) {
@@ -712,14 +716,35 @@
     //   }
     // }
 
+    console.log('stripsHeuristic(): before modified section')
+    if (modified && (triedMoves.length > 0)) {
+      // sussman modification
+      // construct the id for a move which we would want to be certain to do next for sussman
+      // because we want to encourage all blocks to begin onTable()
+      console.log('getting recent info')
+      var mostRecentMoveID = triedMoves[triedMoves.length - 1].id;
+      var mostRecentBlock = triedMoves[triedMoves.length - 1].x;
+      console.log('has recent info')
+      var stackMatch = 'st' + mostRecentBlock;
+      var pickupMatch = 'pi' + mostRecentBlock;
+      console.log('about to hitcha with more console')
+      console.log(mostRecentMoveID + ' === ' + stackMatch + '? ' + (mostRecentMoveID === stackMatch))
+
+      if (mostRecentMoveID === stackMatch) {
+        var found = possibleMoves.find(function(element, index, array) {
+          return (element.id === stackMatch)
+        })
+        console.log(found.id + ' was found, looking for ' + stackMatch)
+      }
+      //  if triedMoves.top() is of the stack(x,y) variety, then select pickup(x) move.
+      //  if triedMoves.top() is one of the pickup(x) move, and unstack(x,y) is available, then choose it.
+    }
+    console.log('stripsHeuristic(): after modified section')
+
     // sort ascending, since we will move through array in descending order, and higher numbers are better
     possibleMoves.sort(function moveHeuristicSort(a, b) {
       return a.heuristic - b.heuristic;
     });
-
-    // possibleMoves.forEach(function(move,index,moves) {
-    //   console.log(move.name + ' has heuristic ' + move.heuristic);
-    // });
   }
 
   function moveNameFromString(str) {
@@ -749,11 +774,12 @@
     return (str1.indexOf(str2) != -1);
   }
 
-  function runstrips(ops, members, move, current, goal, thisPlan, depth, callback) {
+  function runstrips(ops, members, move, current, goal, thisPlan, depth, modified, callback) {
     console.log('solving the blocks world problem with this pair of start and goal states')
     console.log(deepCopy(current))
     console.log(deepCopy(goal))
-    var result = strips(ops, members, move, current, goal, thisPlan, depth, move);
+    console.log('modified = ' + modified)
+    var result = strips(ops, members, move, current, goal, thisPlan, depth, modified);
     result.moves = [];
     findMoves(result.thisMove, result.moves);
     delete result.triedMoves;
@@ -819,7 +845,7 @@
       for (var i = 0; i < depth; ++i) {
         spacer += ' + '
       }
-      if (depth > 20) {
+      if (depth > 10) {
         console.log(spacer + 'past max depth, returning false')
         return {
           plan: plan,
@@ -827,6 +853,10 @@
         }
       }
       var open = getOpen(plan);
+      open.sort(function prioritizeGoalside(a, b) {
+        // console.log(a.parent.name + '.constraint=' + a.parent.constraint + ' < ' + b.parent.name + '.constraint=' + b.parent.constraint + ' ?' + (a.parent.constraint < b.parent.constraint))
+        return a.parent.constraint < b.parent.constraint
+      })
       console.log(spacer + 'open list')
       console.log(open)
       if (open.length == 0) {
@@ -850,6 +880,7 @@
           }
         }
       }
+
       var thisPrecondition = open[0];
 
       var possibleMoves = ops.generatePopOperations(thisPrecondition, members, start);
@@ -991,12 +1022,12 @@
         // console.log(openStartPredicates)
         var openStartStatement = new Statement(openStartPredicates);
         possibles.forEach(function(move) {
-          if (move.name === 'start') {
-            move.heuristic = 100;
-          } else {
+          // if (move.name === 'start') {
+          //   move.heuristic = 100;
+          // } else {
             var count = move.p.containsSome(openStartStatement);
             move.heuristic = count;
-          }
+          // }
         })
         possibles.sort(function popHeuristicSort(a,b) {
           return b.heuristic - a.heuristic;
@@ -1127,20 +1158,20 @@
           p1.setCausalLink(p2);
           p2.setCausalLink(p1);          
         }
-        // console.log('connectPredicates(): connecting ' + p1.toString() + ' to ' + p2.toString() + '?')
-        // console.log('connectPredicates(): ' + p1.toString() + ' links: ' + p1.getCausalLinks().length + ', ' + p2.toString() + ' links: ' + p2.getCausalLinks().length)
-        // console.log(p1)
-        // console.log(p2)
+        console.log('connectPredicates(): connecting ' + p1.toString() + ' to ' + p2.toString() + '?')
+        console.log('connectPredicates(): ' + p1.toString() + ' links: ' + p1.getCausalLinks().length + ', ' + p2.toString() + ' links: ' + p2.getCausalLinks().length)
+        console.log(p1)
+        console.log(p2)
       }
 
       function disconnectPredicates(p1, p2) {
-        // console.log('these two were previously linked together')
-        // console.log('p1 had ' + p1.causalLinks.length + ' links and p2 had ' + p2.causalLinks.length + ' links')
-        // console.log('and p1.isOpen() ' + p1.isOpen() + ' and p2.isOpen() ' + p2.isOpen());
+        console.log('these two were previously linked together')
+        console.log('p1 had ' + p1.causalLinks.length + ' links and p2 had ' + p2.causalLinks.length + ' links')
+        console.log('and p1.isOpen() ' + p1.isOpen() + ' and p2.isOpen() ' + p2.isOpen());
         p1.removeCausalLink(p2);
         p2.removeCausalLink(p1);
-        // console.log('now p1 has ' + p1.causalLinks.length + ' links and p2 has ' + p2.causalLinks.length + ' links')
-        // console.log('and p1.isOpen() ' + p1.isOpen() + ' and p2.isOpen() ' + p2.isOpen());
+        console.log('now p1 has ' + p1.causalLinks.length + ' links and p2 has ' + p2.causalLinks.length + ' links')
+        console.log('and p1.isOpen() ' + p1.isOpen() + ' and p2.isOpen() ' + p2.isOpen());
       }
 
       function connectMovesBeforeToAfter(m1, m2) {
